@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <math.h>
 
-const uint32_t width =  800;
-const uint32_t height = 600;
+const uint16_t width =  800;
+const uint16_t height = 600;
 
 int main () {
 
@@ -18,7 +18,7 @@ int main () {
 
 	float rotation = 0.0f;
 
-	int32_t offset_x, offset_y;
+	int16_t offset_x, offset_y;
 
 	float _player_x,_player_y,_player_z;
 	_player_x = 0.0f;
@@ -40,14 +40,18 @@ int main () {
 	 	 0.0f,  0.5f, 0.0f	 
 	};
 
-	GLfloat d_colors [] = {
-		0.0f,1.0f,0.0f,
-		0.0f,0.0f,1.0f,
-		1.0f,0.0f,0.0f
+	GLubyte d_colors [] = {
+		255,0,0,
+		0,0,255,
+		0,255,0
 	};
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
+
+	glMatrixMode(GL_PROJECTION);  
+	glLoadIdentity();
+	gluPerspective(40.0,(GLdouble)width/(GLdouble)height,0.1,20.0);
 
 	while(xg_window_isopen()){
 
@@ -62,7 +66,6 @@ int main () {
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		
 		if(xg_keyboard_ascii(27)) {
 			xg_window_stop ();
 		}
@@ -91,10 +94,6 @@ int main () {
 			_player_z -= _dir_z * frameTime;
 		}
 
-		glMatrixMode(GL_PROJECTION);  
-		glLoadIdentity();
-		gluPerspective(40.0,(GLdouble)width/(GLdouble)height,0.1,20.0);
-
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		gluLookAt(_player_x,_player_y,_player_z,_player_x + _dir_x,_player_y + _dir_y, _player_z + _dir_z,0,1,0);
@@ -102,7 +101,7 @@ int main () {
 		glRotatef(rotation, 0.0f, 1.0f, 0.0f);
 
 		glVertexPointer(3, GL_FLOAT, 0, d_verts);
-		glColorPointer(3, GL_FLOAT, 0, d_colors);
+		glColorPointer(3, GL_UNSIGNED_BYTE, 0, d_colors);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		xg_glx_swap();
