@@ -44,8 +44,6 @@ int main () {
 
 	xg_window_show();
 
-	float rotation = 0.0f;
-
 	int32_t offset_x, offset_y;
 
 	int32_t p_chunk_x = 0;
@@ -92,12 +90,7 @@ int main () {
 		
 	while(xg_window_isopen()){
 		float frameTime = xg_get_ftime();
-		rotation += frameTime * 20.0f;
 		
-		if(rotation > 360.0f){
-			rotation = 0.0f;
-		}
-
 		xg_window_update();
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
