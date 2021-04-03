@@ -60,9 +60,12 @@ void CLL_freeList (struct CLL* list){
 void CLL_freeListAndData (struct CLL* list){
 	struct CLL_element* p;
 	for(p = list->first; p != NULL; p = p->nxt){
-		DFA_free(&p->data->vertex_array);
-		DFA_free(&p->data->texcrd_array);
-		DFA_free(&p->data->lightl_array);
+		DFA_free(&p->data->vertex_array[0]);
+		DFA_free(&p->data->texcrd_array[0]);
+		DFA_free(&p->data->lightl_array[0]);
+		DFA_free(&p->data->vertex_array[1]);
+		DFA_free(&p->data->texcrd_array[1]);
+		DFA_free(&p->data->lightl_array[1]);
 		pthread_mutex_destroy(&p->data->c_mutex);
 		free(p->data);
 	}
