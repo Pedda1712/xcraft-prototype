@@ -10,9 +10,13 @@ struct sync_chunk_t {
 	int32_t _x;
 	int32_t _z;
 	struct chunk_t data;
-	struct DFA vertex_array;
-	struct DFA texcrd_array;
-	struct DFA lightl_array;
+	
+	// Chunk Mesh
+	bool onmesh; // Which mesh the chunkbuilder writes into / which mesh ISNT rendered
+	struct DFA vertex_array[2];
+	struct DFA texcrd_array[2];
+	struct DFA lightl_array[2];
+	
 	pthread_mutex_t c_mutex;
 	bool initialized;
 	bool render;

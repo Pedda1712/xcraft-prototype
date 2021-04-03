@@ -27,28 +27,32 @@ pthread_t chunk_thread;
 pthread_mutex_t chunk_builder_mutex;
 
 void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t){
-	float lightlevel = (Y_AXIS == axis) ? ( mirorred ? 1.0f : 0.4f) : 0.6f;
+	bool onmesh = in->onmesh;
+	float lightlevel = (Y_AXIS == axis) ? ( mirorred ? 1.0f : 0.4f) : 0.8f;
+	float diroffset =  (Z_AXIS == axis) ? 0.7f : 1.0f;
+	lightlevel *= diroffset;
+	
 	switch(axis){
 		
 		case X_AXIS:{
-			DFA_add(&in->vertex_array, wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array, wy             );DFA_add(&in->vertex_array, wz);
-			DFA_add(&in->vertex_array, wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array, wy             );DFA_add(&in->vertex_array, wz + BLOCK_SIZE);
-			DFA_add(&in->vertex_array, wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array, wy + BLOCK_SIZE);DFA_add(&in->vertex_array, wz + BLOCK_SIZE);
-			DFA_add(&in->vertex_array, wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array, wy + BLOCK_SIZE);DFA_add(&in->vertex_array, wz);
+			DFA_add(&in->vertex_array[onmesh], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[onmesh], wy             );DFA_add(&in->vertex_array[onmesh], wz);
+			DFA_add(&in->vertex_array[onmesh], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[onmesh], wy             );DFA_add(&in->vertex_array[onmesh], wz + BLOCK_SIZE);
+			DFA_add(&in->vertex_array[onmesh], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[onmesh], wy + BLOCK_SIZE);DFA_add(&in->vertex_array[onmesh], wz + BLOCK_SIZE);
+			DFA_add(&in->vertex_array[onmesh], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[onmesh], wy + BLOCK_SIZE);DFA_add(&in->vertex_array[onmesh], wz);
 		break;}
 		
 		case Y_AXIS:{
-			DFA_add(&in->vertex_array, wx             );DFA_add(&in->vertex_array, wy + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array, wz);
-			DFA_add(&in->vertex_array, wx + BLOCK_SIZE);DFA_add(&in->vertex_array, wy + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array, wz);
-			DFA_add(&in->vertex_array, wx + BLOCK_SIZE);DFA_add(&in->vertex_array, wy + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array, wz + BLOCK_SIZE);
-			DFA_add(&in->vertex_array, wx             );DFA_add(&in->vertex_array, wy + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array, wz + BLOCK_SIZE);
+			DFA_add(&in->vertex_array[onmesh], wx             );DFA_add(&in->vertex_array[onmesh], wy + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[onmesh], wz);
+			DFA_add(&in->vertex_array[onmesh], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[onmesh], wy + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[onmesh], wz);
+			DFA_add(&in->vertex_array[onmesh], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[onmesh], wy + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[onmesh], wz + BLOCK_SIZE);
+			DFA_add(&in->vertex_array[onmesh], wx             );DFA_add(&in->vertex_array[onmesh], wy + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[onmesh], wz + BLOCK_SIZE);
 		break;}
 		
 		case Z_AXIS:{
-			DFA_add(&in->vertex_array, wx             );DFA_add(&in->vertex_array, wy             );DFA_add(&in->vertex_array, wz + BLOCK_SIZE * mirorred);
-			DFA_add(&in->vertex_array, wx + BLOCK_SIZE);DFA_add(&in->vertex_array, wy             );DFA_add(&in->vertex_array, wz + BLOCK_SIZE * mirorred);
-			DFA_add(&in->vertex_array, wx + BLOCK_SIZE);DFA_add(&in->vertex_array, wy + BLOCK_SIZE);DFA_add(&in->vertex_array, wz + BLOCK_SIZE * mirorred);
-			DFA_add(&in->vertex_array, wx             );DFA_add(&in->vertex_array, wy + BLOCK_SIZE);DFA_add(&in->vertex_array, wz + BLOCK_SIZE * mirorred);
+			DFA_add(&in->vertex_array[onmesh], wx             );DFA_add(&in->vertex_array[onmesh], wy             );DFA_add(&in->vertex_array[onmesh], wz + BLOCK_SIZE * mirorred);
+			DFA_add(&in->vertex_array[onmesh], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[onmesh], wy             );DFA_add(&in->vertex_array[onmesh], wz + BLOCK_SIZE * mirorred);
+			DFA_add(&in->vertex_array[onmesh], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[onmesh], wy + BLOCK_SIZE);DFA_add(&in->vertex_array[onmesh], wz + BLOCK_SIZE * mirorred);
+			DFA_add(&in->vertex_array[onmesh], wx             );DFA_add(&in->vertex_array[onmesh], wy + BLOCK_SIZE);DFA_add(&in->vertex_array[onmesh], wz + BLOCK_SIZE * mirorred);
 		break;}
 		
 	}
@@ -57,42 +61,38 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 		case 1:{
 			if(axis == Y_AXIS){
 				if(mirorred){
-					DFA_add(&in[0].texcrd_array, 0.0f);DFA_add(&in[0].texcrd_array, 0.0f);
-					DFA_add(&in[0].texcrd_array, TEX_SIZE);DFA_add(&in[0].texcrd_array, 0.0f);
-					DFA_add(&in[0].texcrd_array, TEX_SIZE);DFA_add(&in[0].texcrd_array, TEX_SIZE);
-					DFA_add(&in[0].texcrd_array, 0.0f);DFA_add(&in[0].texcrd_array, TEX_SIZE);
+					DFA_add(&in[0].texcrd_array[onmesh], 0.0f);DFA_add(&in[0].texcrd_array[onmesh], 0.0f);
+					DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);DFA_add(&in[0].texcrd_array[onmesh], 0.0f);
+					DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);
+					DFA_add(&in[0].texcrd_array[onmesh], 0.0f);DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);
 				}else{
-					DFA_add(&in[0].texcrd_array, TEX_SIZE * 2);DFA_add(&in[0].texcrd_array, 0.0f);
-					DFA_add(&in[0].texcrd_array, TEX_SIZE * 3);DFA_add(&in[0].texcrd_array, 0.0f);
-					DFA_add(&in[0].texcrd_array, TEX_SIZE * 3);DFA_add(&in[0].texcrd_array, TEX_SIZE);
-					DFA_add(&in[0].texcrd_array, TEX_SIZE * 2);DFA_add(&in[0].texcrd_array, TEX_SIZE);
+					DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[onmesh], 0.0f);
+					DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * 3);DFA_add(&in[0].texcrd_array[onmesh], 0.0f);
+					DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * 3);DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);
+					DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);
 				}
 			}else{
-				DFA_add(&in[0].texcrd_array, TEX_SIZE * 2);DFA_add(&in[0].texcrd_array, TEX_SIZE);
-				DFA_add(&in[0].texcrd_array, TEX_SIZE);DFA_add(&in[0].texcrd_array, TEX_SIZE);
-				DFA_add(&in[0].texcrd_array, TEX_SIZE);DFA_add(&in[0].texcrd_array, 0.0f);
-				DFA_add(&in[0].texcrd_array, TEX_SIZE * 2);DFA_add(&in[0].texcrd_array, 0.0f);
+				DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);
+				DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);
+				DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);DFA_add(&in[0].texcrd_array[onmesh], 0.0f);
+				DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[onmesh], 0.0f);
 			}
 		break;}
 		default:{
-			DFA_add(&in[0].texcrd_array, TEX_SIZE * block_t * 1.0f);DFA_add(&in[0].texcrd_array, 0.0f);
-			DFA_add(&in[0].texcrd_array, TEX_SIZE * (block_t+1) * 1.0f);DFA_add(&in[0].texcrd_array, 0.0f);
-			DFA_add(&in[0].texcrd_array, TEX_SIZE * (block_t+1) * 1.0f);DFA_add(&in[0].texcrd_array, TEX_SIZE);
-			DFA_add(&in[0].texcrd_array, TEX_SIZE * block_t * 1.0f);DFA_add(&in[0].texcrd_array, TEX_SIZE);
+			DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * block_t * 1.0f);DFA_add(&in[0].texcrd_array[onmesh], 0.0f);
+			DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * (block_t+1) * 1.0f);DFA_add(&in[0].texcrd_array[onmesh], 0.0f);
+			DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * (block_t+1) * 1.0f);DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);
+			DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE * block_t * 1.0f);DFA_add(&in[0].texcrd_array[onmesh], TEX_SIZE);
 		break;}
 	}
 	
-	for(int i = 0; i < 12; i++){DFA_add(&in[0].lightl_array, lightlevel);};
+	for(int i = 0; i < 12; i++){DFA_add(&in[0].lightl_array[onmesh], lightlevel);};
 }
 
 void build_chunk_mesh (struct sync_chunk_t* in){
 	
 	int chunk_x = in->_x;
 	int chunk_z = in->_z;
-	
-	DFA_clear(&in->vertex_array);
-	DFA_clear(&in->texcrd_array);
-	DFA_clear(&in->lightl_array);
 
 	/*
 	0->the chunk in +X direction (or NULL)
@@ -109,8 +109,12 @@ void build_chunk_mesh (struct sync_chunk_t* in){
 	float c_x_off = (float)chunk_x - 0.5f;
 	float c_z_off = (float)chunk_z - 0.5f;
 	
-	in->vertex_array.size = 0;
-	in->texcrd_array.size = 0;
+	bool onmesh = in->onmesh;
+	in->vertex_array[onmesh].size = 0;
+	in->texcrd_array[onmesh].size = 0;
+	DFA_clear(&in->vertex_array[onmesh]);
+	DFA_clear(&in->texcrd_array[onmesh]);
+	DFA_clear(&in->lightl_array[onmesh]);
 
 	for(int x = 0; x < CHUNK_SIZE_X;++x){
 		for(int y = 0; y < CHUNK_SIZE_Y;++y){
@@ -134,7 +138,7 @@ void build_chunk_mesh (struct sync_chunk_t* in){
 							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t);
 						}
 					}else{
-						emit_face(in, wx, wy, wz, Y_AXIS, false, block_t);
+						//emit_face(in, wx, wy, wz, Y_AXIS, false, block_t);
 					}
 					
 					if(!((x + 1) == CHUNK_SIZE_X)){
@@ -198,7 +202,9 @@ void* chunk_thread_func (void* arg){
 
 		build_chunk_mesh(p->data);
 		p->data->render = true;
-
+		
+		p->data->onmesh = !p->data->onmesh; // "Swap" the meshes / make it available to render
+		
 		chunk_data_unsync(p->data);
 	}
 	CLL_freeList(&chunk_list[1]);
@@ -219,9 +225,13 @@ bool initialize_chunk_thread (){
 		for(int z = -WORLD_RANGE; z <= WORLD_RANGE;++z){
 			struct sync_chunk_t* temp = malloc (sizeof(struct sync_chunk_t));
 			if(pthread_mutex_init(&temp->c_mutex, NULL) != 0){return false;}
-			temp->vertex_array = DFA_init();
-			temp->texcrd_array = DFA_init();
-			temp->lightl_array = DFA_init();
+			temp->vertex_array[0] = DFA_init();
+			temp->texcrd_array[0] = DFA_init();
+			temp->lightl_array[0] = DFA_init();
+			temp->vertex_array[1] = DFA_init();
+			temp->texcrd_array[1] = DFA_init();
+			temp->lightl_array[1] = DFA_init();
+			temp->onmesh = 0;
 			temp->_x = x;
  			temp->_z = z;
 			temp->initialized = false;

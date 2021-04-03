@@ -84,6 +84,8 @@ int main () {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, iw, ih, 0, GL_BGR, GL_UNSIGNED_BYTE, image);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	free (image);
 
 	glClearColor(0.0f,0.5f,1.0f,1.0f);
@@ -141,7 +143,7 @@ int main () {
 		
 		struct CLL_element* p;
 		for(p = chunk_list->first; p!= NULL; p = p->nxt){
-			if(!chunk_updating(p->data)){
+			// No mutex with the chunkbuilding thread because they SHOULD always access different meshes in the double-buffer
 				if(p->data->render){
 					struct sync_chunk_t* ch = p->data;
 					
@@ -149,14 +151,13 @@ int main () {
 					glLoadIdentity();
 					gluLookAt(_player_x,_player_y,_player_z,_player_x + _dir_x,_player_y + _dir_y, _player_z + _dir_z,0,1,0);
 
-					glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array.data);
-					glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array.data);
-					glColorPointer (3, GL_FLOAT, 0, ch->lightl_array.data);
-					glDrawArrays(GL_QUADS, 0, ch->vertex_array.size/3 );
+					bool rendermesh = !p->data->onmesh;
+					glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[rendermesh].data);
+					glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[rendermesh].data);
+					glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[rendermesh].data);
+					glDrawArrays(GL_QUADS, 0, ch->vertex_array[rendermesh].size/3 );
 					
 				}
-				chunk_data_unsync(p->data);
-			}
 		}
 
 		xg_glx_swap();

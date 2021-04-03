@@ -17,9 +17,6 @@ void DFA_free (struct DFA* arr){
 }
 
 void DFA_clear (struct DFA* arr){
-	DFA_free(arr);
-	arr->data = malloc(sizeof(float) * DFA_INITSIZE);
-	arr->_alloc_size = DFA_INITSIZE;
 	arr->size = 0;
 }
 

@@ -74,7 +74,7 @@ float noise (float x, float y, float z){
 	float yf = (y-int_y);
 	float zf = (z-int_z);
 	
-	// If negative inputs, convert to values between 1 and  0 (e.g -0.9 -> 0.1
+	// If negative inputs, convert to values between 1 and  0 (e.g. -0.9 -> 0.1)
 	xf = (x > 0) ? xf : (1 + xf); 
 	yf = (y > 0) ? yf : (1 + yf);
 	zf = (z > 0) ? zf : (1 + zf);
@@ -97,20 +97,16 @@ float noise (float x, float y, float z){
 	
 	float x1,x2,y1,y2;
 	
-	x1 = LERP(    grad (aaa, xf  , yf  , zf),           
-				grad (baa, xf-1, yf  , zf),             
-				u);                                    
-	x2 = LERP(    grad (aba, xf  , yf-1, zf),           
-				grad (bba, xf-1, yf-1, zf),             
-					u);
+	x1 = LERP(grad (aaa, xf  , yf  , zf), grad (baa, xf-1, yf  , zf), u);     
+	
+	x2 = LERP(grad (aba, xf  , yf-1, zf), grad (bba, xf-1, yf-1, zf), u);
+	
 	y1 = LERP(x1, x2, v);
 	
-	x1 = LERP(    grad (aab, xf  , yf  , zf-1),
-				grad (bab, xf-1, yf  , zf-1),
-				u);
-	x2 = LERP(    grad (abb, xf  , yf-1, zf-1),
-				grad (bbb, xf-1, yf-1, zf-1),
-				u);
+	x1 = LERP(grad (aab, xf  , yf  , zf-1), grad (bab, xf-1, yf  , zf-1), u);
+	
+	x2 = LERP(grad (abb, xf  , yf-1, zf-1), grad (bbb, xf-1, yf-1, zf-1), u);
+	
 	y2 = LERP (x1, x2, v);
 	
 	return LERP(y1,y2,w);
