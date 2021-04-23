@@ -35,6 +35,8 @@ int main () {
 	struct CLL* chunk_list = get_chunk_list(0); // Get a list with all of the chunks
 
 	struct chunkspace_position pos = {0,0};
+
+	sleep(1);
 	trigger_generator_update(&pos);
 
 	xg_init();

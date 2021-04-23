@@ -27,8 +27,7 @@ uint8_t* loadBMP (char* fname, uint32_t* w, uint32_t* h){
 		return NULL;
 	}
 	
-	uint32_t row_size = ((bpp * width) / 32) * 4;
-	uint32_t unpadded_row_size = width * (bpp / 8);
+	uint32_t row_size = width * (bpp / 8);
 	
 	uint8_t* current_row = malloc(row_size);
 	uint8_t* pixel_data = malloc(row_size * height);
@@ -36,7 +35,7 @@ uint8_t* loadBMP (char* fname, uint32_t* w, uint32_t* h){
 	fseek(m_file, pixel_offset, SEEK_SET);
 	for(int i = height-1;i >= 0;--i){
 		fread(current_row, row_size, 1, m_file);
-		memcpy(pixel_data + i*unpadded_row_size, current_row, unpadded_row_size);
+		memcpy(pixel_data + i*row_size, current_row, row_size);
 	}
 	free(current_row);
 	

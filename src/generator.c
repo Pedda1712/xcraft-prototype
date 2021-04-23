@@ -12,6 +12,11 @@
 
 pthread_t gen_thread;
 pthread_mutex_t chunk_gen_mutex;
+pthread_cond_t chunk_gen_lock;
+
+bool is_chunkgen_running;
+
+struct chunkspace_position chunk_gen_arg;
 
 // Copy of chunk_list in chunkbuilder.c
 struct CLL* cl[3];
@@ -31,118 +36,125 @@ float block_noise (float x, float y, float z){
 
 
 void* chunk_gen_thread (void* arg){
-	
-	struct chunkspace_position prepos = *((struct chunkspace_position*)arg);
-	struct chunkspace_position* pos = &prepos;
-	
-	pthread_mutex_lock(&chunk_gen_mutex);
-	
-	lock_list(cl[2]);
-	
-	bool has_chunk_assigned [NUMBER_CHUNKS];
-	memset(has_chunk_assigned, 0, sizeof(has_chunk_assigned));
-	
-	struct CLL or_chunks = CLL_init(); // List of Out-Of-Range Chunks
-	
-	// Find All Chunks that are out of range 
-	for(struct CLL_element* e = cl[0]->first; e != NULL; e = e->nxt){ 
+	while(is_chunkgen_running){
+		pthread_mutex_lock(&chunk_gen_mutex);
+		pthread_cond_wait(&chunk_gen_lock, &chunk_gen_mutex);
 		
-		chunk_data_sync(e->data);
-		int32_t x_local = e->data->_x - pos->_x + WORLD_RANGE;
-		int32_t z_local = e->data->_z - pos->_z + WORLD_RANGE;
+		struct chunkspace_position prepos = chunk_gen_arg;
+		struct chunkspace_position* pos = &prepos;
 		
-		if(x_local < 0 || z_local < 0 || x_local > WORLD_RANGE * 2 || z_local > WORLD_RANGE * 2){ // Chunks is out of Range
-			e->data->render = false; // reenabled by the chunkbuilder-thread
-			CLL_add(&or_chunks, e->data);
-		}else{
-			has_chunk_assigned[ATCHUNK(x_local, z_local)] = true;
+		lock_list(cl[2]);
+		
+		bool has_chunk_assigned [NUMBER_CHUNKS];
+		memset(has_chunk_assigned, 0, sizeof(has_chunk_assigned));
+		
+		struct CLL or_chunks = CLL_init(); // List of Out-Of-Range Chunks
+		
+		// Find All Chunks that are out of range 
+		for(struct CLL_element* e = cl[0]->first; e != NULL; e = e->nxt){ 
 			
-			if(!e->data->initialized){
-				CLL_add(cl[2], e->data);
-				e->data->initialized = true;
-			}
+			chunk_data_sync(e->data);
+			int32_t x_local = e->data->_x - pos->_x + WORLD_RANGE;
+			int32_t z_local = e->data->_z - pos->_z + WORLD_RANGE;
 			
-		}
-
-		chunk_data_unsync(e->data);
-	}
-	// Reassign out of range chunks to positions that dont have one yet
-	struct CLL_element* j;
-	j = or_chunks.first;
-	for(int cx = 0; cx < WORLD_RANGE*2+1;++cx){
-		for(int cz = 0; cz < WORLD_RANGE*2+1;++cz){
-			if(!has_chunk_assigned[ATCHUNK(cx,cz)]){
-				if( j != NULL ){
-					chunk_data_sync(j->data);
-					int32_t x_global = cx + pos->_x - WORLD_RANGE;
-					int32_t z_global = cz + pos->_z - WORLD_RANGE;
-					j->data->_x = x_global;
-					j->data->_z = z_global;
-					CLL_add(cl[2], j->data);
-					chunk_data_unsync(j->data);
-					j = j->nxt;
+			if(x_local < 0 || z_local < 0 || x_local > WORLD_RANGE * 2 || z_local > WORLD_RANGE * 2){ // Chunks is out of Range
+				e->data->render = false; // reenabled by the chunkbuilder-thread
+				CLL_add(&or_chunks, e->data);
+			}else{
+				has_chunk_assigned[ATCHUNK(x_local, z_local)] = true;
+				
+				if(!e->data->initialized){
+					CLL_add(cl[2], e->data);
+					e->data->initialized = true;
 				}
+				
 			}
-			
+
+			chunk_data_unsync(e->data);
 		}
-	}
-	
-	CLL_freeList(&or_chunks);
-	CLL_destroyList(&or_chunks);
-	
-	//TODO: figure out which chunks to update based on where the player is located
-	struct CLL_element* p;
-	for(p = cl[2]->first; p != NULL; p = p->nxt){
-		chunk_data_sync(p->data);
+		// Reassign out of range chunks to positions that dont have one yet
+		struct CLL_element* j;
+		j = or_chunks.first;
+		for(int cx = 0; cx < WORLD_RANGE*2+1;++cx){
+			for(int cz = 0; cz < WORLD_RANGE*2+1;++cz){
+				if(!has_chunk_assigned[ATCHUNK(cx,cz)]){
+					if( j != NULL ){
+						chunk_data_sync(j->data);
+						
+						int32_t x_global = cx + pos->_x - WORLD_RANGE;
+						int32_t z_global = cz + pos->_z - WORLD_RANGE;
+						j->data->_x = x_global;
+						j->data->_z = z_global;
+						CLL_add(cl[2], j->data);
+						
+						chunk_data_unsync(j->data);
+						
+						j = j->nxt;
+					}
+				}
+				
+			}
+		}
 		
-		memset(p->data->data.block_data, 0, CHUNK_MEM);
+		CLL_freeList(&or_chunks);
+		CLL_destroyList(&or_chunks);
 		
-		int x = p->data->_x;
-		int z = p->data->_z;
-		
-		for(int cx = 0; cx < CHUNK_SIZE_X;++cx){
-			for(int cz = 0; cz < CHUNK_SIZE_Z;++cz){
-				bool under_sky = true;
-				int depth_below = 0;
-				for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
-					if( block_noise((cx + x * CHUNK_SIZE_X), (cy), (cz + z * CHUNK_SIZE_Z)) > 0){
-						if(!under_sky){
-							if(depth_below < 4){
-								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = 2;
-								depth_below++;
-							}
-							else{
-								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = 3;
+		struct CLL_element* p;
+		for(p = cl[2]->first; p != NULL; p = p->nxt){
+			chunk_data_sync(p->data);
+			
+			memset(p->data->data.block_data, 0, CHUNK_MEM);
+			
+			int x = p->data->_x;
+			int z = p->data->_z;
+			
+			for(int cx = 0; cx < CHUNK_SIZE_X;++cx){
+				for(int cz = 0; cz < CHUNK_SIZE_Z;++cz){
+					bool under_sky = true;
+					int depth_below = 0;
+					for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
+						if( block_noise((cx + x * CHUNK_SIZE_X), (cy), (cz + z * CHUNK_SIZE_Z)) > 0){
+							if(!under_sky){
+								if(depth_below < 4){
+									p->data->data.block_data[ATBLOCK(cx,cy,cz)] = 2;
+									depth_below++;
+								}
+								else{
+									p->data->data.block_data[ATBLOCK(cx,cy,cz)] = 3;
+								}
+							}else{
+								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = 1;
+								under_sky = false;
 							}
 						}else{
-							p->data->data.block_data[ATBLOCK(cx,cy,cz)] = 1;
-							under_sky = false;
+							under_sky = true;
+							depth_below = 0;
 						}
-					}else{
-						under_sky = true;
-						depth_below = 0;
 					}
 				}
 			}
+			chunk_data_unsync(p->data);
+			
+			lock_list(cl[1]);
+			CLL_add(cl[1], p->data);
+			unlock_list(cl[1]);
+			
+			trigger_chunk_update();
 		}
-		chunk_data_unsync(p->data);
+		
+		// When Generation is done, rebuild Meshes for all Chunks (cl[0] (all) -> cl[1] (buildqueue))
 		lock_list(cl[1]);
-		CLL_add(cl[1], p->data);
+		CLL_copyList(cl[0], cl[1]);
 		unlock_list(cl[1]);
-		trigger_chunk_update();
+
+		CLL_freeList(cl[2]);
+		
+		trigger_chunk_update(); //Clear up the borders
+		
+		unlock_list(cl[2]);
+		pthread_mutex_unlock(&chunk_gen_mutex);
 	}
 	
-	lock_list(cl[1]);
-	CLL_copyList(cl[0], cl[1]);
-	unlock_list(cl[1]);
-
-	CLL_freeList(cl[2]);
-	
-	trigger_chunk_update(); //Clear up the borders
-	
-	unlock_list(cl[2]);
-	
-	pthread_mutex_unlock(&chunk_gen_mutex);
 	return 0;
 }
 
@@ -152,16 +164,28 @@ bool initialize_generator_thread (){
 	cl[2] = get_chunk_list(2);
 	
 	pthread_mutex_init(&chunk_gen_mutex, NULL);
+	pthread_cond_init(&chunk_gen_lock, NULL);
+	
+	is_chunkgen_running = true;
+	pthread_create(&gen_thread, NULL, chunk_gen_thread, NULL);
 	
 	return true;
 }
 
 
-void trigger_generator_update (struct chunkspace_position* pos ){
-	pthread_create(&gen_thread, NULL, chunk_gen_thread, pos);
+void trigger_generator_update (struct chunkspace_position* pos){
+	//pthread_create(&gen_thread, NULL, chunk_gen_thread, pos);
+	chunk_gen_arg = *pos;
+
+	pthread_cond_signal(&chunk_gen_lock);
 }
 
 void terminate_generator_thread (){
+	
+	is_chunkgen_running = false;
+	sleep(1);
+	trigger_generator_update(&chunk_gen_arg);
+	
 	pthread_cancel(gen_thread);
 	pthread_join(gen_thread, NULL);
 	pthread_mutex_destroy(&chunk_gen_mutex);

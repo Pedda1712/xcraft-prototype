@@ -25,10 +25,12 @@
 struct CLL chunk_list [3];
 pthread_t chunk_thread;
 pthread_mutex_t chunk_builder_mutex;
+pthread_cond_t chunk_builder_lock;
+bool is_running;
 
 void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t){
 	bool onmesh = in->onmesh;
-	float lightlevel = (Y_AXIS == axis) ? ( mirorred ? 1.0f : 0.4f) : 0.8f;
+	float lightlevel = (Y_AXIS == axis) ? ( mirorred ? 1.0f : 0.45f) : 0.8f;
 	float diroffset =  (Z_AXIS == axis) ? 0.7f : 1.0f;
 	lightlevel *= diroffset;
 	
@@ -193,24 +195,29 @@ void build_chunk_mesh (struct sync_chunk_t* in){
 }
 
 void* chunk_thread_func (void* arg){
-	pthread_mutex_lock(&chunk_builder_mutex);
-	lock_list(&chunk_list[1]);
-		
-	struct CLL_element* p;
-	for(p = chunk_list[1].first; p != NULL; p = p->nxt){
-		chunk_data_sync(p->data);
-
-		build_chunk_mesh(p->data);
-		p->data->render = true;
-		
-		p->data->onmesh = !p->data->onmesh; // "Swap" the meshes / make it available to render
-		
-		chunk_data_unsync(p->data);
-	}
-	CLL_freeList(&chunk_list[1]);
-	unlock_list(&chunk_list[1]);
 	
-	pthread_mutex_unlock(&chunk_builder_mutex);
+	while(is_running){
+		pthread_mutex_lock(&chunk_builder_mutex);
+		pthread_cond_wait(&chunk_builder_lock, &chunk_builder_mutex);
+		
+		lock_list(&chunk_list[1]);
+			
+		struct CLL_element* p;
+		for(p = chunk_list[1].first; p != NULL; p = p->nxt){
+			chunk_data_sync(p->data);
+
+			build_chunk_mesh(p->data);
+			p->data->render = true;
+			
+			p->data->onmesh = !p->data->onmesh; // "Swap" the meshes / make it available to render
+			
+			chunk_data_unsync(p->data);
+		}
+		CLL_freeList(&chunk_list[1]);
+		unlock_list(&chunk_list[1]);
+		
+		pthread_mutex_unlock(&chunk_builder_mutex);
+	}
 	return 0;
 }
 
@@ -220,6 +227,7 @@ bool initialize_chunk_thread (){
 	chunk_list[2] = CLL_init();
 	
 	pthread_mutex_init(&chunk_builder_mutex,NULL);
+	pthread_cond_init(&chunk_builder_lock, NULL);
 	
 	for(int x = -WORLD_RANGE; x <= WORLD_RANGE; ++x){
 		for(int z = -WORLD_RANGE; z <= WORLD_RANGE;++z){
@@ -240,10 +248,18 @@ bool initialize_chunk_thread (){
 		}
 	}
 	
+	is_running = true;
+	pthread_create(&chunk_thread, NULL, chunk_thread_func, NULL);
+	
 	return true;
 }
 
 void terminate_chunk_thread (){
+	
+	is_running = false;
+	sleep(1);
+	trigger_chunk_update();
+	
 	pthread_join(chunk_thread, NULL);
 	
 	printf("Freeing Chunk Memory ...\n");
@@ -281,5 +297,5 @@ void chunk_data_unsync(struct sync_chunk_t* c){
 }
 
 void trigger_chunk_update (){
-	pthread_create(&chunk_thread, NULL, chunk_thread_func, NULL);
+	pthread_cond_signal(&chunk_builder_lock);
 }
