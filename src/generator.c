@@ -36,8 +36,8 @@ float block_noise (float x, float y, float z){
 
 
 void* chunk_gen_thread (void* arg){
+	pthread_mutex_lock(&chunk_gen_mutex);
 	while(is_chunkgen_running){
-		pthread_mutex_lock(&chunk_gen_mutex);
 		pthread_cond_wait(&chunk_gen_lock, &chunk_gen_mutex);
 		
 		struct chunkspace_position prepos = chunk_gen_arg;
@@ -152,9 +152,8 @@ void* chunk_gen_thread (void* arg){
 		trigger_chunk_update(); //Clear up the borders
 		
 		unlock_list(cl[2]);
-		pthread_mutex_unlock(&chunk_gen_mutex);
 	}
-	
+	pthread_mutex_unlock(&chunk_gen_mutex);
 	return 0;
 }
 

@@ -195,9 +195,8 @@ void build_chunk_mesh (struct sync_chunk_t* in){
 }
 
 void* chunk_thread_func (void* arg){
-	
+	pthread_mutex_lock(&chunk_builder_mutex);
 	while(is_running){
-		pthread_mutex_lock(&chunk_builder_mutex);
 		pthread_cond_wait(&chunk_builder_lock, &chunk_builder_mutex);
 		
 		lock_list(&chunk_list[1]);
@@ -216,8 +215,8 @@ void* chunk_thread_func (void* arg){
 		CLL_freeList(&chunk_list[1]);
 		unlock_list(&chunk_list[1]);
 		
-		pthread_mutex_unlock(&chunk_builder_mutex);
 	}
+	pthread_mutex_unlock(&chunk_builder_mutex);
 	return 0;
 }
 
