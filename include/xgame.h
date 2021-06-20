@@ -1,5 +1,5 @@
-#ifndef LINWIN
-#define LINWIN
+#ifndef XGAME_LIB
+#define XGAME_LIB
 
 #include <stdbool.h>
 

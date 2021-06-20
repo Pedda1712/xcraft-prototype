@@ -34,6 +34,11 @@ void CLL_add  (struct CLL* list ,struct sync_chunk_t* data){
 	}
 	struct CLL_element* p;
 	for( p = list->first; p != NULL; p = p->nxt){
+		
+		if(p->data == data) { // If duplicate is found, cancel the operation
+			break;
+		}
+		
 		if(p->nxt == NULL){
 			p->nxt = malloc(sizeof(struct CLL_element));
 			p->nxt->nxt = NULL;
@@ -60,12 +65,13 @@ void CLL_freeList (struct CLL* list){
 void CLL_freeListAndData (struct CLL* list){
 	struct CLL_element* p;
 	for(p = list->first; p != NULL; p = p->nxt){
-		DFA_free(&p->data->vertex_array[0]);
-		DFA_free(&p->data->texcrd_array[0]);
-		DFA_free(&p->data->lightl_array[0]);
-		DFA_free(&p->data->vertex_array[1]);
-		DFA_free(&p->data->texcrd_array[1]);
-		DFA_free(&p->data->lightl_array[1]);
+
+		for(int i = 0; i < MESH_LEVELS; ++i){
+			DFA_free(&p->data->vertex_array[i]);
+			DFA_free(&p->data->texcrd_array[i]);
+			DFA_free(&p->data->lightl_array[i]);
+		}
+		
 		pthread_mutex_destroy(&p->data->c_mutex);
 		free(p->data);
 	}

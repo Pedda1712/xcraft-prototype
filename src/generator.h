@@ -4,10 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct chunkspace_position {
-	int32_t _x;
-	int32_t _z;
-};
+#include <worlddefs.h>
 
 bool initialize_generator_thread ();
 void terminate_generator_thread ();

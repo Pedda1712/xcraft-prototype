@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <worlddefs.h>
 #include <chunklist.h>
@@ -13,6 +14,12 @@
 
 #include <pnoise.h>
 
+/*
+	Minecraft Clone in C, using:
+		- Xlib for Windowing
+		- OpenGL 1.1 for Graphics
+ */
+
 const uint16_t width = 1600;
 const uint16_t height = 900;
 
@@ -20,7 +27,7 @@ int main () {
 
 	//Setting up Chunk-Building Thread
 	
-	printf("Initializing Chunk Thread ...\n");
+	printf("Initializing Builder Thread ...\n");
 	if(!initialize_chunk_thread()){
 		printf("Failed to initialize Chunk Thread!\n");
 		exit(-1);
@@ -36,7 +43,7 @@ int main () {
 
 	struct chunkspace_position pos = {0,0};
 
-	sleep(1);
+	sleep(0.5f); // (DIRTY), need to wait for generator thread to get to pthread_cond_wait
 	trigger_generator_update(&pos);
 
 	xg_init();
@@ -45,13 +52,15 @@ int main () {
 	xg_init_glx();
 
 	xg_window_show();
+	
+	xg_cursor_visible(false);
 
 	int32_t offset_x, offset_y;
 
 	int32_t p_chunk_x = 0;
 	int32_t p_chunk_z = 0;
 	
-	float p_speed = 10.0f;
+	float p_speed = 30.0f;
 	float _player_x,_player_y,_player_z;
 	_player_x = 0.0f;
 	_player_y = 64.0f;
@@ -64,14 +73,15 @@ int main () {
 	angle_x = 3.14159f/2;
 	angle_y = 0.0f;
 
-	xg_cursor_visible(false);
-
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_DEPTH_TEST);
+	
+	glBlendFunc(GL_ONE_MINUS_CONSTANT_COLOR, GL_CONSTANT_COLOR);
+	glBlendColor(0.33f,0.33f,0.0f,1.0f);
 	
 	glMatrixMode(GL_PROJECTION);  
 	glLoadIdentity();
@@ -85,13 +95,13 @@ int main () {
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, iw, ih, 0, GL_BGR, GL_UNSIGNED_BYTE, image);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	free (image);
 
 	glClearColor(0.0f,0.5f,1.0f,1.0f);
-		
+	
 	while(xg_window_isopen()){
 		float frameTime = xg_get_ftime();
 		
@@ -142,24 +152,42 @@ int main () {
 			pos._z = p_chunk_z;
 			trigger_generator_update(&pos);
 		}
-		
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		gluLookAt(_player_x,_player_y,_player_z,_player_x + _dir_x,_player_y + _dir_y, _player_z + _dir_z,0,1,0);
+
 		struct CLL_element* p;
 		for(p = chunk_list->first; p!= NULL; p = p->nxt){
-			// No mutex with the chunkbuilding thread because they SHOULD always access different meshes in the double-buffer
-				if(p->data->render){
-					struct sync_chunk_t* ch = p->data;
-					
-					glMatrixMode(GL_MODELVIEW);
-					glLoadIdentity();
-					gluLookAt(_player_x,_player_y,_player_z,_player_x + _dir_x,_player_y + _dir_y, _player_z + _dir_z,0,1,0);
+			if (pthread_mutex_trylock (&p->data->c_mutex) == 0){
+				struct sync_chunk_t* ch = p->data;
 
-					bool rendermesh = !p->data->onmesh;
-					glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[rendermesh].data);
-					glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[rendermesh].data);
-					glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[rendermesh].data);
-					glDrawArrays(GL_QUADS, 0, ch->vertex_array[rendermesh].size/3 );
-					
-				}
+				// Render Chunk
+				glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[0].data);
+				glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[0].data);
+				glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[0].data);
+				glDrawArrays(GL_QUADS, 0, ch->vertex_array[0].size/3 );
+
+				pthread_mutex_unlock(&p->data->c_mutex);
+			}
+		}
+		for(p = chunk_list->first; p!= NULL; p = p->nxt){
+			if (pthread_mutex_trylock (&p->data->c_mutex) == 0){
+				struct sync_chunk_t* ch = p->data;
+				// Render Water
+				
+				glEnable(GL_BLEND);
+				
+				glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[1].data);
+				glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[1].data);
+				glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[1].data);
+				glDrawArrays(GL_QUADS, 0, ch->vertex_array[1].size/3 );
+				
+				glDisable(GL_BLEND);
+				
+				
+				pthread_mutex_unlock(&p->data->c_mutex);
+			}
 		}
 
 		xg_glx_swap();
@@ -169,7 +197,7 @@ int main () {
 	
 	printf("Terminating Generator Thread ...\n");
 	terminate_generator_thread();
-	printf("Terminating Chunk Thread ...\n");
+	printf("Terminating Builder Thread ...\n");
 	terminate_chunk_thread();
 
 	return 0;

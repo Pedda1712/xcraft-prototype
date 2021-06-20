@@ -14,8 +14,22 @@
 
 #define BLOCK_SIZE 1.0f
 
+#define MESH_LEVELS 2
+#define WATER_LEVEL 48
+
+#define GRASS_B  1
+#define DIRT_B   2
+#define STONE_B  3
+#define GRAVEL_B 4
+#define WATER_B  5
+
 #define ATCHUNK(x,z) ((x) + ((z) * (WORLD_RANGE*2+1)))
 #define ATBLOCK(x,y,z) ((x) + ((z) * CHUNK_SIZE_X) + ((y) * CHUNK_LAYER))
+
+struct chunkspace_position {
+	int32_t _x;
+	int32_t _z;
+};
 
 struct chunk_t {
 	uint8_t block_data [CHUNK_MEM];

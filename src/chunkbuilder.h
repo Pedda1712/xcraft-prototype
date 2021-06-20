@@ -1,5 +1,5 @@
-#ifndef WORLDTHREAD
-#define WORLDTHREAD
+#ifndef CHUNKBUILDER
+#define CHUNKBUILDER
 
 #include <stdbool.h>
 #include <worlddefs.h>
@@ -9,17 +9,27 @@
 struct sync_chunk_t {
 	int32_t _x;
 	int32_t _z;
-	struct chunk_t data;
 	
-	// Chunk Mesh
-	bool onmesh; // Which mesh the chunkbuilder writes into / which mesh ISNT rendered
-	struct DFA vertex_array[2];
-	struct DFA texcrd_array[2];
-	struct DFA lightl_array[2];
+	/*
+	 * data: all blocks EXCEPT water
+	 * water: all blocks INCLUDING water // weird solution, but was easy to implement with existing code :P
+	 */
+	struct chunk_t data;
+	struct chunk_t water;
+
+	/*
+		0 -> Chunk Mesh 
+		1 -> Chunk Mesh (double buffer)
+		2 -> Water Mesh
+		3 -> Water Mesh (double buffer)
+	 */
+	
+	struct DFA vertex_array[MESH_LEVELS]; 
+	struct DFA texcrd_array[MESH_LEVELS];
+	struct DFA lightl_array[MESH_LEVELS];
 	
 	pthread_mutex_t c_mutex;
 	bool initialized;
-	bool render;
 };
 
 struct CLL* get_chunk_list (uint8_t l);
