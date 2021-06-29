@@ -1,6 +1,5 @@
 #ifndef WORLDDEFS
 #define WORLDDEFS
-
 #include <stdint.h>
 
 #define WORLD_RANGE 12 
@@ -15,8 +14,10 @@
 #define BLOCK_SIZE 1.0f
 
 #define MESH_LEVELS 2
-#define WATER_LEVEL 48
+#define WATER_LEVEL 40
+#define WATER_SURFACE_OFFSET (1.0f/8.0f)
 
+#define AIR_B    0
 #define GRASS_B  1
 #define DIRT_B   2
 #define STONE_B  3

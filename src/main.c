@@ -17,11 +17,14 @@
 /*
 	Minecraft Clone in C, using:
 		- Xlib for Windowing
-		- OpenGL 1.1 for Graphics
+		- Immediate Mode OpenGL for Graphics
  */
 
 const uint16_t width = 1600;
 const uint16_t height = 900;
+
+#define P_SPEED 10.0f
+#define P_SHIFT_SPEED 30.0f
 
 int main () {
 
@@ -42,10 +45,11 @@ int main () {
 	struct CLL* chunk_list = get_chunk_list(0); // Get a list with all of the chunks
 
 	struct chunkspace_position pos = {0,0};
+	// Generate the initial Chunks on the main thread
+	printf("Generating Initial Chunks ... \n");
+	run_chunk_generation(&pos);
 
-	sleep(0.5f); // (DIRTY), need to wait for generator thread to get to pthread_cond_wait
-	trigger_generator_update(&pos);
-
+	printf("Initializing X11 Window ... \n");
 	xg_init();
 	xg_window(width, height, "Window");
 	xg_window_set_not_resizable();
@@ -77,8 +81,17 @@ int main () {
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
+	float skycolor [4] = {0.0f, 0.5f, 1.0f, 1.0f};
+	
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	
+	glEnable(GL_FOG);
+	glFogfv(GL_FOG_COLOR, skycolor);
+	glFogi (GL_FOG_MODE , GL_LINEAR);
+	glFogf (GL_FOG_END  , (WORLD_RANGE/1.2f) * CHUNK_SIZE_X);
+	glFogf (GL_FOG_START, (WORLD_RANGE/1.7f) * CHUNK_SIZE_X);
 	
 	glBlendFunc(GL_ONE_MINUS_CONSTANT_COLOR, GL_CONSTANT_COLOR);
 	glBlendColor(0.33f,0.33f,0.0f,1.0f);
@@ -100,7 +113,7 @@ int main () {
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	free (image);
 
-	glClearColor(0.0f,0.5f,1.0f,1.0f);
+	glClearColor(skycolor[0],skycolor[1],skycolor[2],skycolor[3]);
 	
 	while(xg_window_isopen()){
 		float frameTime = xg_get_ftime();
@@ -109,7 +122,7 @@ int main () {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		if(xg_keyboard_ascii(27)) {
+		if(xg_keyboard_ascii((char)XK_Escape)) {
 			xg_window_stop ();
 		}
 
@@ -125,16 +138,36 @@ int main () {
 		_dir_x = cos(angle_y) * cos(angle_x);
 		_dir_y = sin(angle_y);
 		_dir_z = cos(angle_y) * sin(angle_x);
+		
+		float _strafe_x, _strafe_z; // Cross Product of _dir and (0, 1, 0) -> _strafe_y would always be 0
+		_strafe_x = -_dir_z;
+		_strafe_z = _dir_x;
+		float _strafe_length = sqrt(_strafe_x * _strafe_x + _strafe_z * _strafe_z);
+		_strafe_x /= _strafe_length;
+		_strafe_z /= _strafe_length;
 
-		if(xg_keyboard_ascii(119)){
+		if(xg_keyboard_modif(XK_Shift_L)){
+			p_speed = P_SHIFT_SPEED;
+		}else{
+			p_speed = P_SPEED;
+		}
+		if(xg_keyboard_ascii('w')){
 			_player_x += _dir_x * frameTime * p_speed;
 			_player_y += _dir_y * frameTime * p_speed;
 			_player_z += _dir_z * frameTime * p_speed;
-		}
-		if(xg_keyboard_ascii(115)){
+		}  
+		if(xg_keyboard_ascii('s')){
 			_player_x -= _dir_x * frameTime * p_speed;
 			_player_y -= _dir_y * frameTime * p_speed;
 			_player_z -= _dir_z * frameTime * p_speed;
+		}
+		if(xg_keyboard_ascii('d')){
+			_player_x += _strafe_x * frameTime * p_speed;
+			_player_z += _strafe_z * frameTime * p_speed;
+		}
+		if(xg_keyboard_ascii('a')){
+			_player_x -= _strafe_x * frameTime * p_speed;
+			_player_z -= _strafe_z * frameTime * p_speed;
 		}
 		
 		//Check if Player crossed a chunk border
@@ -144,7 +177,7 @@ int main () {
 		
 		int32_t n_p_chunk_x = (_player_x + _add_x) / CHUNK_SIZE_X;
 		int32_t n_p_chunk_z = (_player_z + _add_z) / CHUNK_SIZE_Z;
-		
+			
 		if(n_p_chunk_x != p_chunk_x || n_p_chunk_z != p_chunk_z){
 			p_chunk_x = n_p_chunk_x;
 			p_chunk_z = n_p_chunk_z;
@@ -185,7 +218,6 @@ int main () {
 				
 				glDisable(GL_BLEND);
 				
-				
 				pthread_mutex_unlock(&p->data->c_mutex);
 			}
 		}
@@ -193,6 +225,7 @@ int main () {
 		xg_glx_swap();
 
 	}
+	printf("Closing X11 Window ...\n");
 	xg_window_close();
 	
 	printf("Terminating Generator Thread ...\n");

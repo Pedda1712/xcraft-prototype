@@ -5,6 +5,7 @@
 
 #include <X11/X.h>
 #include <X11/Xlib.h>
+#include <X11/keysymdef.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glx.h>
@@ -26,6 +27,7 @@ float xg_get_ftime ();
 
 // Keyboard Input Functions
 bool xg_keyboard_ascii (uint32_t key);
+bool xg_keyboard_modif (uint32_t keysym);
 void xg_mouse_position (int32_t* x,int32_t* y);
 void xg_set_mouse_position (int32_t x, int32_t y);
 void xg_cursor_visible (bool vis);
