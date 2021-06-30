@@ -13,6 +13,7 @@ set (CLIENT_SOURCES
 	${CMAKE_SOURCE_DIR}/src/chunklist.c
 	${CMAKE_SOURCE_DIR}/src/generator.c
 	${CMAKE_SOURCE_DIR}/src/globallists.c
+	${CMAKE_SOURCE_DIR}/src/lightcalc.c
 )
 
 add_executable(xcraft ${CLIENT_SOURCES})

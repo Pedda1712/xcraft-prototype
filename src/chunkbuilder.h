@@ -13,9 +13,12 @@ struct sync_chunk_t {
 	/*
 	 * data: all blocks EXCEPT water
 	 * water: all blocks INCLUDING water // weird solution, but was easy to implement with existing code :P
+	 * light: lightlevel at block
 	 */
 	struct chunk_t data;
 	struct chunk_t water;
+	struct chunk_t light;
+	struct chunk_t light_temp;
 
 	/*
 		0 -> Chunk Mesh 

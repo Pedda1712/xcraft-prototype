@@ -24,7 +24,7 @@ const uint16_t width = 1600;
 const uint16_t height = 900;
 
 #define P_SPEED 10.0f
-#define P_SHIFT_SPEED 30.0f
+#define P_SHIFT_SPEED 20.0f
 
 int main () {
 
@@ -90,8 +90,8 @@ int main () {
 	glEnable(GL_FOG);
 	glFogfv(GL_FOG_COLOR, skycolor);
 	glFogi (GL_FOG_MODE , GL_LINEAR);
-	glFogf (GL_FOG_END  , (WORLD_RANGE/1.2f) * CHUNK_SIZE_X);
-	glFogf (GL_FOG_START, (WORLD_RANGE/1.7f) * CHUNK_SIZE_X);
+	glFogf (GL_FOG_END  , (WORLD_RANGE/1.2f) * CHUNK_SIZE);
+	glFogf (GL_FOG_START, (WORLD_RANGE/1.7f) * CHUNK_SIZE);
 	
 	glBlendFunc(GL_ONE_MINUS_CONSTANT_COLOR, GL_CONSTANT_COLOR);
 	glBlendColor(0.33f,0.33f,0.0f,1.0f);
@@ -172,11 +172,11 @@ int main () {
 		
 		//Check if Player crossed a chunk border
 		
-		float _add_x = (_player_x > 0) ? CHUNK_SIZE_X / 2.0f : -CHUNK_SIZE_X / 2.0f;
-		float _add_z = (_player_z > 0) ? CHUNK_SIZE_Z / 2.0f : -CHUNK_SIZE_Z / 2.0f;
+		float _add_x = (_player_x > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
+		float _add_z = (_player_z > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
 		
-		int32_t n_p_chunk_x = (_player_x + _add_x) / CHUNK_SIZE_X;
-		int32_t n_p_chunk_z = (_player_z + _add_z) / CHUNK_SIZE_Z;
+		int32_t n_p_chunk_x = (_player_x + _add_x) / CHUNK_SIZE;
+		int32_t n_p_chunk_z = (_player_z + _add_z) / CHUNK_SIZE;
 			
 		if(n_p_chunk_x != p_chunk_x || n_p_chunk_z != p_chunk_z){
 			p_chunk_x = n_p_chunk_x;

@@ -2,6 +2,7 @@
 #include <chunklist.h>
 #include <chunkbuilder.h>
 #include <pnoise.h>
+#include <lightcalc.h>
 
 #include <pthread.h>
 
@@ -113,8 +114,8 @@ void generate_chunk_data () {
 		int x = p->data->_x;
 		int z = p->data->_z;
 		
-		for(int cx = 0; cx < CHUNK_SIZE_X;++cx){
-			for(int cz = 0; cz < CHUNK_SIZE_Z;++cz){
+		for(int cx = 0; cx < CHUNK_SIZE;++cx){
+			for(int cz = 0; cz < CHUNK_SIZE;++cz){
 				bool under_sky = true;
 				int depth_below = 0;
 				
@@ -130,7 +131,7 @@ void generate_chunk_data () {
 						sec_layer_block = GRAVEL_B; //Gravel
 					}
 					
-					if( block_noise((cx + x * CHUNK_SIZE_X), (cy), (cz + z * CHUNK_SIZE_Z)) > 0){
+					if( block_noise((cx + x * CHUNK_SIZE), (cy), (cz + z * CHUNK_SIZE)) > 0){
 						if(!under_sky){
 							if(depth_below < 4){
 								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
