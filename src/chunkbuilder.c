@@ -147,8 +147,7 @@ void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, fl
 	bool xmzp = (bor[6] == AIR_B);
 	bool xmzm = (bor[7] == AIR_B);
 	
-	
-	// Emit Face
+	// Emit Vertices
 	DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * ((zp || xm) || xmzp));DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
 	DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * ((zp || xp) || xpzp));DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
 	DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * ((zm || xp) || xpzm));DFA_add(&in->vertex_array[offset], wz);
@@ -220,6 +219,8 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 			break;
 		}
 	}
+	
+	emit_offset = emit_offset * 2 + !in->rendermesh;
 	
 	uint8_t border_block_type [8];
 	void load_borders (int x, int y, int z){ // This method gets the bordering blocks of the block at x,y,z (including corner pieces) 
@@ -413,7 +414,7 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 						}else if (data->block_data[ATBLOCK(x,y+1,z)] != WATER_B){ // Special Case for Water only
 							if(m_level == 1){
 								load_borders (x, y+1, z);
-								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type,  in->light.block_data[ATBLOCK(x,y+1,z)]);
+								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type,  in->light.block_data[ATBLOCK(x,y,z)]);
 							}
 						}
 					}else{
@@ -481,7 +482,7 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 	}
 }
 
-void* chunk_thread_func (void* arg){
+void* chunk_thread_func (){
 	pthread_mutex_lock(&chunk_builder_mutex);
 	while(is_running){
 		pthread_cond_wait(&chunk_builder_lock, &chunk_builder_mutex);
@@ -501,6 +502,8 @@ void* chunk_thread_func (void* arg){
 			
 			build_chunk_mesh(p->data, 0); // Build Block Mesh
 			build_chunk_mesh(p->data, 1); // Build Water Mesh
+			
+			p->data->rendermesh = !p->data->rendermesh;
 			
 			chunk_data_unsync(p->data);
 		}

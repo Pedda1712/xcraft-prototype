@@ -26,7 +26,7 @@ struct sync_chunk_t {
 		2 -> Water Mesh
 		3 -> Water Mesh (double buffer)
 	 */
-	
+	bool rendermesh;
 	struct DFA vertex_array[MESH_LEVELS]; 
 	struct DFA texcrd_array[MESH_LEVELS];
 	struct DFA lightl_array[MESH_LEVELS];

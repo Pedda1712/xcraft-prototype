@@ -188,7 +188,7 @@ void generate_chunk_data () {
 	unlock_list(&chunk_list[2]);
 }
 
-void* chunk_gen_thread (void* arg){
+void* chunk_gen_thread (){
 	pthread_mutex_lock(&chunk_gen_mutex);
 	while(is_chunkgen_running){
 		pthread_cond_wait(&chunk_gen_lock, &chunk_gen_mutex);

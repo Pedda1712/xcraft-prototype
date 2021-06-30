@@ -20,7 +20,7 @@
 		- Immediate Mode OpenGL for Graphics
  */
 
-const uint16_t width = 1600;
+const uint16_t width = 1440;
 const uint16_t height = 900;
 
 #define P_SPEED 10.0f
@@ -87,7 +87,7 @@ int main () {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	
-	glEnable(GL_FOG);
+	//glEnable(GL_FOG);
 	glFogfv(GL_FOG_COLOR, skycolor);
 	glFogi (GL_FOG_MODE , GL_LINEAR);
 	glFogf (GL_FOG_END  , (WORLD_RANGE/1.2f) * CHUNK_SIZE);
@@ -192,34 +192,26 @@ int main () {
 
 		struct CLL_element* p;
 		for(p = chunk_list->first; p!= NULL; p = p->nxt){
-			if (pthread_mutex_trylock (&p->data->c_mutex) == 0){
-				struct sync_chunk_t* ch = p->data;
+			struct sync_chunk_t* ch = p->data;
 
-				// Render Chunk
-				glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[0].data);
-				glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[0].data);
-				glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[0].data);
-				glDrawArrays(GL_QUADS, 0, ch->vertex_array[0].size/3 );
-
-				pthread_mutex_unlock(&p->data->c_mutex);
-			}
+			// Render Chunk
+			glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[0 + ch->rendermesh].data);
+			glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[0 + ch->rendermesh].data);
+			glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[0 + ch->rendermesh].data);
+			glDrawArrays(GL_QUADS, 0, ch->vertex_array[0 + ch->rendermesh].size/3 );
 		}
 		for(p = chunk_list->first; p!= NULL; p = p->nxt){
-			if (pthread_mutex_trylock (&p->data->c_mutex) == 0){
-				struct sync_chunk_t* ch = p->data;
-				// Render Water
+			struct sync_chunk_t* ch = p->data;
+			// Render Water
 				
-				glEnable(GL_BLEND);
-				
-				glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[1].data);
-				glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[1].data);
-				glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[1].data);
-				glDrawArrays(GL_QUADS, 0, ch->vertex_array[1].size/3 );
-				
-				glDisable(GL_BLEND);
-				
-				pthread_mutex_unlock(&p->data->c_mutex);
-			}
+			glEnable(GL_BLEND);
+			
+			glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[2 + ch->rendermesh].data);
+			glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[2 + ch->rendermesh].data);
+			glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[2 + ch->rendermesh].data);
+			glDrawArrays(GL_QUADS, 0, ch->vertex_array[2 + ch->rendermesh].size/3 );
+			
+			glDisable(GL_BLEND);
 		}
 
 		xg_glx_swap();
