@@ -47,7 +47,7 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 		y_offset = WATER_SURFACE_OFFSET;
 
 	
-	switch(axis){ // Emit the Vertex Positions and get the lightvalue
+	switch(axis){ // Emit the Vertex Positions
 		
 		case X_AXIS:{
 			if(mirorred){

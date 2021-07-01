@@ -30,6 +30,9 @@ int main () {
 
 	//Setting up Chunk-Building Thread
 	
+	printf ("Loading BTD ...\n");
+	loadblockdef("blockdef.btd");
+	
 	printf("Initializing Builder Thread ...\n");
 	if(!initialize_chunk_thread()){
 		printf("Failed to initialize Chunk Thread!\n");

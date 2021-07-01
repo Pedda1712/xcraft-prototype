@@ -18,4 +18,6 @@ struct blocktexdef_t {
 
 extern struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT];
 
+void loadblockdef (char* filename);
+
 #endif
