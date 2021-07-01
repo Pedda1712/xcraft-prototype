@@ -51,7 +51,7 @@ int main () {
 
 	printf("Initializing X11 Window ... \n");
 	xg_init();
-	xg_window(width, height, "Window");
+	xg_window(width, height, "XCraft");
 	xg_window_set_not_resizable();
 	xg_init_glx();
 
@@ -87,7 +87,7 @@ int main () {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	
-	//glEnable(GL_FOG);
+	glEnable(GL_FOG);
 	glFogfv(GL_FOG_COLOR, skycolor);
 	glFogi (GL_FOG_MODE , GL_LINEAR);
 	glFogf (GL_FOG_END  , (WORLD_RANGE/1.2f) * CHUNK_SIZE);
@@ -195,10 +195,10 @@ int main () {
 			struct sync_chunk_t* ch = p->data;
 
 			// Render Chunk
-			glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[0 + ch->rendermesh].data);
-			glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[0 + ch->rendermesh].data);
-			glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[0 + ch->rendermesh].data);
-			glDrawArrays(GL_QUADS, 0, ch->vertex_array[0 + ch->rendermesh].size/3 );
+			glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[ch->rendermesh].data);
+			glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[ch->rendermesh].data);
+			glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[ch->rendermesh].data);
+			glDrawArrays(GL_QUADS, 0, ch->vertex_array[ch->rendermesh].size/3 );
 		}
 		for(p = chunk_list->first; p!= NULL; p = p->nxt){
 			struct sync_chunk_t* ch = p->data;

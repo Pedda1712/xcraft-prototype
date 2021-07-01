@@ -13,11 +13,13 @@
 
 #include <lightcalc.h>
 
-#define X_AXIS 1
-#define Y_AXIS 2
+#define Y_AXIS 1
+#define X_AXIS 2
 #define Z_AXIS 3
 
 #define TEX_SIZE (1.0f/16.0f)
+
+#include <blocktexturedef.h>
 
 #include <globallists.h>
 /*
@@ -40,20 +42,19 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 	lightmul *= diroffset;
 	lightmul *= ((float)lightlevel / (float)MAX_LIGHT);
 	
-	float y_offset;
-	switch(offset){
-		case 1:  y_offset = WATER_SURFACE_OFFSET;break;
-		default: y_offset = 0.0f;break;
-	}
+	float y_offset = 0.0f;
+	if(offset >= 2)
+		y_offset = WATER_SURFACE_OFFSET;
+
 	
 	switch(axis){ // Emit the Vertex Positions and get the lightvalue
 		
 		case X_AXIS:{
 			if(mirorred){
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
 				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
 				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz);
+				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz);
+				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
 			}else{
 				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz);
 				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
@@ -63,6 +64,7 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 		break;}
 		
 		case Y_AXIS:{
+
 			if(mirorred){
 				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
 				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
@@ -78,10 +80,10 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 		
 		case Z_AXIS:{
 			if(mirorred){
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
 				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
 				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
+				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
+				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
 			}else{
 				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
 				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
@@ -92,42 +94,15 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 		
 	}
 	
-	switch(block_t){ // Emit the Texture Coordinates
-		case GRASS_B:{
-			if(axis == Y_AXIS){
-				if(mirorred){
-					DFA_add(&in[0].texcrd_array[offset], 0.0f);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-					DFA_add(&in[0].texcrd_array[offset], 0.0f);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-				}else{
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * 3);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * 3);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-				}
-			}else{
-				if(mirorred){
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-				}else{
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-					DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * 2);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-				}
-			}
-		break;}
-		default:{
-			DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * block_t * 1.0f);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-			DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (block_t+1) * 1.0f);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-			DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (block_t+1) * 1.0f);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-			DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * block_t * 1.0f);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-		break;}
-	}
-	
+	struct blocktexdef_t tex = btd_map[block_t];
+	uint8_t tex_index   = tex.index[(axis - 1) * 2 + mirorred];
+	uint8_t tex_index_x = tex_index % 16;
+	uint8_t tex_index_y = tex_index / 16;
+	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_x+1));DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_y + 1));
+	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_x);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_y + 1));
+	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_x);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_y);
+	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_x+1));DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_y);
+
 	// Emit the Light Level
 	for(int i = 0; i < 12; i++){DFA_add(&in[0].lightl_array[offset], lightmul);};
 }
@@ -154,10 +129,14 @@ void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, fl
 	DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * ((zm || xm) || xmzm));DFA_add(&in->vertex_array[offset], wz);
 	
 	// Emit TexCoords
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * block_t * 1.0f);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (block_t+1) * 1.0f);DFA_add(&in[0].texcrd_array[offset], 0.0f);
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (block_t+1) * 1.0f);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * block_t * 1.0f);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE);
+	struct blocktexdef_t tex = btd_map[block_t];
+	uint8_t tex_index   = tex.index[(Y_AXIS - 1) * 2 + 1];
+	uint8_t tex_index_x = tex_index % 16;
+	uint8_t tex_index_y = tex_index / 16;
+	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_x+1));DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_y + 1));
+	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_x);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_y + 1));
+	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_x);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_y);
+	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_x+1));DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_y);
 	
 	for(int i = 0; i < 12; i++){DFA_add(&in[0].lightl_array[offset], lightmul);};
 }
@@ -414,7 +393,7 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 						}else if (data->block_data[ATBLOCK(x,y+1,z)] != WATER_B){ // Special Case for Water only
 							if(m_level == 1){
 								load_borders (x, y+1, z);
-								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type,  in->light.block_data[ATBLOCK(x,y,z)]);
+								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)]);
 							}
 						}
 					}else{
