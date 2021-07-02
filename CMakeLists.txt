@@ -15,6 +15,8 @@ set (CLIENT_SOURCES
 	${CMAKE_SOURCE_DIR}/src/globallists.c
 	${CMAKE_SOURCE_DIR}/src/lightcalc.c
 	${CMAKE_SOURCE_DIR}/src/blocktexturedef.c
+	${CMAKE_SOURCE_DIR}/src/bmpfont.c
+	${CMAKE_SOURCE_DIR}/src/game.c
 )
 
 add_executable(xcraft ${CLIENT_SOURCES})

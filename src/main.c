@@ -1,4 +1,4 @@
-#include "xgame.h"
+#include <xgame.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -9,6 +9,12 @@
 #include <chunkbuilder.h>
 #include <dynamicarray.h>
 #include <generator.h>
+#include <blocktexturedef.h>
+#include <windowglobals.h>
+#include <bmpfont.h>
+#include <globallists.h>
+
+#include <game.h>
 
 #include <bmp24.h>
 
@@ -20,17 +26,23 @@
 		- Immediate Mode OpenGL for Graphics
  */
 
-const uint16_t width = 1440;
-const uint16_t height = 900;
-
-#define P_SPEED 10.0f
-#define P_SHIFT_SPEED 20.0f
+uint16_t width = 1440;
+uint16_t height = 900;
 
 int main () {
 
-	//Setting up Chunk-Building Thread
+	printf("Initializing X11 Window ... \n");
+	xg_init();
+	xg_window(width, height, "XCraft");
+	xg_window_set_not_resizable();
+	xg_init_glx();
+	xg_window_show();
+	xg_cursor_visible(false);
 	
-	printf ("Loading BTD ...\n");
+	printf ("Loading Bitmap Font 'font.bmp' ... \n");
+	loadfont("font.bmp", GL_LINEAR);
+	
+	printf ("Loading BTD 'blockdef.btd' ...\n");
 	loadblockdef("blockdef.btd");
 	
 	printf("Initializing Builder Thread ...\n");
@@ -45,78 +57,12 @@ int main () {
 		exit(-1);
 	}
 	
-	struct CLL* chunk_list = get_chunk_list(0); // Get a list with all of the chunks
-
-	struct chunkspace_position pos = {0,0};
-	// Generate the initial Chunks on the main thread
-	printf("Generating Initial Chunks ... \n");
-	run_chunk_generation(&pos);
-
-	printf("Initializing X11 Window ... \n");
-	xg_init();
-	xg_window(width, height, "XCraft");
-	xg_window_set_not_resizable();
-	xg_init_glx();
-
-	xg_window_show();
+	printf("Initializing GST ...\n");
+	init_game();
 	
-	xg_cursor_visible(false);
-
-	int32_t offset_x, offset_y;
-
-	int32_t p_chunk_x = 0;
-	int32_t p_chunk_z = 0;
-	
-	float p_speed = 30.0f;
-	float _player_x,_player_y,_player_z;
-	_player_x = 0.0f;
-	_player_y = 64.0f;
-	_player_z = 0.0f;
-	float _dir_x,_dir_y,_dir_z;
-	_dir_x = 0.0f;
-	_dir_y = 0.0f;
-	_dir_z = 0.0f;
-	float angle_x, angle_y;
-	angle_x = 3.14159f/2;
-	angle_y = 0.0f;
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-	float skycolor [4] = {0.0f, 0.5f, 1.0f, 1.0f};
-	
-	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	
-	glEnable(GL_FOG);
-	glFogfv(GL_FOG_COLOR, skycolor);
-	glFogi (GL_FOG_MODE , GL_LINEAR);
-	glFogf (GL_FOG_END  , (WORLD_RANGE/1.2f) * CHUNK_SIZE);
-	glFogf (GL_FOG_START, (WORLD_RANGE/1.7f) * CHUNK_SIZE);
-	
-	glBlendFunc(GL_ONE_MINUS_CONSTANT_COLOR, GL_CONSTANT_COLOR);
-	glBlendColor(0.33f,0.33f,0.0f,1.0f);
-	
-	glMatrixMode(GL_PROJECTION);  
-	glLoadIdentity();
-	gluPerspective(70.0,(GLdouble)width/(GLdouble)height,0.1,500.0);
-	
-	//Loading a Texture
-	uint32_t iw, ih;
-	uint8_t* image = loadBMP("atlas.bmp",&iw,&ih);
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, iw, ih, 0, GL_BGR, GL_UNSIGNED_BYTE, image);
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	free (image);
-
-	glClearColor(skycolor[0],skycolor[1],skycolor[2],skycolor[3]);
+	input_state  = &world_input_state;
+	render_state = &world_render_state;
+	debug_overlay_state = &debug_fps_pos_state;
 	
 	while(xg_window_isopen()){
 		float frameTime = xg_get_ftime();
@@ -124,98 +70,10 @@ int main () {
 		xg_window_update();
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		if(xg_keyboard_ascii((char)XK_Escape)) {
-			xg_window_stop ();
-		}
-
-		xg_mouse_position(&offset_x, &offset_y);
-		offset_x -= width/2;
-		offset_y -= height/2;
-		angle_x += offset_x * 0.001f;
-		angle_y += offset_y * -0.001f;
-		if(angle_y > 3.14159f/2.01f) angle_y = 3.14159f/2.01f;
-		if(angle_y < -3.14159f/2.01f) angle_y = -3.14159f/2.01f;
-		xg_set_mouse_position( width/2, height/2 );
-
-		_dir_x = cos(angle_y) * cos(angle_x);
-		_dir_y = sin(angle_y);
-		_dir_z = cos(angle_y) * sin(angle_x);
 		
-		float _strafe_x, _strafe_z; // Cross Product of _dir and (0, 1, 0) -> _strafe_y would always be 0
-		_strafe_x = -_dir_z;
-		_strafe_z = _dir_x;
-		float _strafe_length = sqrt(_strafe_x * _strafe_x + _strafe_z * _strafe_z);
-		_strafe_x /= _strafe_length;
-		_strafe_z /= _strafe_length;
-
-		if(xg_keyboard_modif(XK_Shift_L)){
-			p_speed = P_SHIFT_SPEED;
-		}else{
-			p_speed = P_SPEED;
-		}
-		if(xg_keyboard_ascii('w')){
-			_player_x += _dir_x * frameTime * p_speed;
-			_player_y += _dir_y * frameTime * p_speed;
-			_player_z += _dir_z * frameTime * p_speed;
-		}  
-		if(xg_keyboard_ascii('s')){
-			_player_x -= _dir_x * frameTime * p_speed;
-			_player_y -= _dir_y * frameTime * p_speed;
-			_player_z -= _dir_z * frameTime * p_speed;
-		}
-		if(xg_keyboard_ascii('d')){
-			_player_x += _strafe_x * frameTime * p_speed;
-			_player_z += _strafe_z * frameTime * p_speed;
-		}
-		if(xg_keyboard_ascii('a')){
-			_player_x -= _strafe_x * frameTime * p_speed;
-			_player_z -= _strafe_z * frameTime * p_speed;
-		}
-		
-		//Check if Player crossed a chunk border
-		
-		float _add_x = (_player_x > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
-		float _add_z = (_player_z > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
-		
-		int32_t n_p_chunk_x = (_player_x + _add_x) / CHUNK_SIZE;
-		int32_t n_p_chunk_z = (_player_z + _add_z) / CHUNK_SIZE;
-			
-		if(n_p_chunk_x != p_chunk_x || n_p_chunk_z != p_chunk_z){
-			p_chunk_x = n_p_chunk_x;
-			p_chunk_z = n_p_chunk_z;
-			pos._x = p_chunk_x;
-			pos._z = p_chunk_z;
-			trigger_generator_update(&pos);
-		}
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		gluLookAt(_player_x,_player_y,_player_z,_player_x + _dir_x,_player_y + _dir_y, _player_z + _dir_z,0,1,0);
-
-		struct CLL_element* p;
-		for(p = chunk_list->first; p!= NULL; p = p->nxt){
-			struct sync_chunk_t* ch = p->data;
-
-			// Render Chunk
-			glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[ch->rendermesh].data);
-			glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[ch->rendermesh].data);
-			glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[ch->rendermesh].data);
-			glDrawArrays(GL_QUADS, 0, ch->vertex_array[ch->rendermesh].size/3 );
-		}
-		for(p = chunk_list->first; p!= NULL; p = p->nxt){
-			struct sync_chunk_t* ch = p->data;
-			// Render Water
-				
-			glEnable(GL_BLEND);
-			
-			glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[2 + ch->rendermesh].data);
-			glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[2 + ch->rendermesh].data);
-			glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[2 + ch->rendermesh].data);
-			glDrawArrays(GL_QUADS, 0, ch->vertex_array[2 + ch->rendermesh].size/3 );
-			
-			glDisable(GL_BLEND);
-		}
+		input_state (frameTime);
+		render_state();
+		debug_overlay_state(frameTime);
 
 		xg_glx_swap();
 

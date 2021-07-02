@@ -15,6 +15,11 @@ struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT] = { // Default BTD values
 void loadblockdef (char* filename){
 	FILE* btd_file = fopen (filename, "r");
 	
+	if (btd_file == NULL) {
+		printf("Error opening BTD file, using defaults ... \n");
+		return;
+	}
+	
 	for(int i = 0; i < BLOCK_TYPE_COUNT; i++){
 		char nums [6] [3];
 		fscanf ( btd_file, "%s %s %s %s %s %s", nums[0], nums[1], nums[2], nums[3], nums[4], nums[5]);
@@ -26,5 +31,4 @@ void loadblockdef (char* filename){
 	}
 	
 	fclose (btd_file);
-	
 }

@@ -14,6 +14,7 @@ struct sync_chunk_t {
 	 * data: all blocks EXCEPT water
 	 * water: all blocks INCLUDING water // weird solution, but was easy to implement with existing code :P
 	 * light: lightlevel at block
+	 * light_temp: temporary buffer used for running light calculations
 	 */
 	struct chunk_t data;
 	struct chunk_t water;
@@ -40,8 +41,6 @@ bool chunk_updating (struct sync_chunk_t* c);
 void chunk_data_sync  (struct sync_chunk_t* c);
 
 void chunk_data_unsync(struct sync_chunk_t* c);
-
-void generate_world ();
 
 bool initialize_chunk_thread ();
 void start_chunk_thread ();
