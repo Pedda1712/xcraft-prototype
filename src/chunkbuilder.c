@@ -22,17 +22,16 @@
 #include <blocktexturedef.h>
 
 #include <globallists.h>
-/*
- * Contains:
- * chunk_list as defined in globallists.c:
- * [0] -> All Chunks 
- * [1] -> All Chunks whose mesh needs updating 
- * [2] -> All Chunks who need to be regenerated at a new position
-*/
 
-pthread_t chunk_thread;
-pthread_mutex_t chunk_builder_mutex;
+#define NUM_BUILDER_THREADS 2
+
+int builder_list [NUM_BUILDER_THREADS] = {
+	1,3
+};
+
+pthread_t builder_thread [NUM_BUILDER_THREADS];
 pthread_cond_t chunk_builder_lock;
+
 bool is_running;
 
 void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel){
@@ -461,45 +460,55 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 	}
 }
 
-void* chunk_thread_func (){
+void do_updates_for_list (struct CLL* list){
+	lock_list(list);
+	
+	struct CLL_element* p;
+	for(p = list->first; p != NULL; p = p->nxt){
+		chunk_data_sync(p->data);
+
+		calculate_light(p->data, &skylight_func);
+
+		chunk_data_unsync(p->data);
+	}
+	
+	for(p = list->first; p != NULL; p = p->nxt){
+		chunk_data_sync(p->data);
+		
+		build_chunk_mesh(p->data, 0); // Build Block Mesh
+		build_chunk_mesh(p->data, 1); // Build Water Mesh
+		
+		p->data->rendermesh = !p->data->rendermesh;
+		
+		chunk_data_unsync(p->data);
+	}
+	CLL_freeList(list);
+	unlock_list(list);
+}
+
+void* builder_thread_func (void* arg){
+	
+	int buildlist = *(int*)arg;
+	
+	pthread_mutex_t chunk_builder_mutex;
+	pthread_mutex_init(&chunk_builder_mutex,NULL);
+	
 	pthread_mutex_lock(&chunk_builder_mutex);
 	while(is_running){
 		pthread_cond_wait(&chunk_builder_lock, &chunk_builder_mutex);
-		
-		lock_list(&chunk_list[1]);
-			
-		struct CLL_element* p;
-		for(p = chunk_list[1].first; p != NULL; p = p->nxt){
-			chunk_data_sync(p->data);
-			
-			calculate_light(p->data, &skylight_func);
-			
-			chunk_data_unsync(p->data);
-		}
-		for(p = chunk_list[1].first; p != NULL; p = p->nxt){
-			chunk_data_sync(p->data);
-			
-			build_chunk_mesh(p->data, 0); // Build Block Mesh
-			build_chunk_mesh(p->data, 1); // Build Water Mesh
-			
-			p->data->rendermesh = !p->data->rendermesh;
-			
-			chunk_data_unsync(p->data);
-		}
-		CLL_freeList(&chunk_list[1]);
-		unlock_list(&chunk_list[1]);
-		
+		do_updates_for_list(&chunk_list[buildlist]);
 	}
 	pthread_mutex_unlock(&chunk_builder_mutex);
+	pthread_mutex_destroy(&chunk_builder_mutex);
 	return 0;
 }
 
-bool initialize_chunk_thread (){
+bool initialize_builder_thread (){
 	chunk_list[0] = CLL_init();
 	chunk_list[1] = CLL_init();
 	chunk_list[2] = CLL_init();
+	chunk_list[3] = CLL_init();
 	
-	pthread_mutex_init(&chunk_builder_mutex,NULL);
 	pthread_cond_init(&chunk_builder_lock, NULL);
 	
 	for(int x = -WORLD_RANGE; x <= WORLD_RANGE; ++x){
@@ -521,43 +530,26 @@ bool initialize_chunk_thread (){
 	}
 	
 	is_running = true;
-	pthread_create(&chunk_thread, NULL, chunk_thread_func, NULL);
-	
+	for (int i = 0; i < NUM_BUILDER_THREADS; i++){
+		pthread_create(&builder_thread[i], NULL, builder_thread_func, &builder_list[i]);
+	}
 	return true;
 }
 
-void terminate_chunk_thread (){
+void terminate_builder_thread (){
 	
 	is_running = false;
-	trigger_chunk_update();
-	
-	pthread_join(chunk_thread, NULL);
-	
+	trigger_builder_update();
+
+	for(int i = 0; i < NUM_BUILDER_THREADS;i++){pthread_join(builder_thread[i], NULL);}
+		
 	printf("Freeing Chunk Memory ...\n");
-	lock_list(&chunk_list[0]);
-	lock_list(&chunk_list[1]);
-	lock_list(&chunk_list[2]);
+	for(int i = 0; i < NUMLISTS;i++){lock_list(&chunk_list[i]);}
 	CLL_freeListAndData(&chunk_list[0]);
-	CLL_freeList(&chunk_list[1]);
-	CLL_freeList(&chunk_list[2]);
-	CLL_destroyList(&chunk_list[0]);
-	CLL_destroyList(&chunk_list[1]);
-	CLL_destroyList(&chunk_list[2]);
+	for(int i = 1; i < NUMLISTS;i++){CLL_freeList(&chunk_list[i]);}
+	for(int i = 0; i < NUMLISTS;i++){CLL_destroyList(&chunk_list[i]);}
 	
-	pthread_mutex_destroy(&chunk_builder_mutex);
 	pthread_cond_destroy(&chunk_builder_lock);
-}
-
-struct CLL* get_chunk_list (uint8_t l){
-	return &chunk_list[l];
-}
-
-bool chunk_updating (struct sync_chunk_t* c){
-	if(pthread_mutex_trylock(&c->c_mutex) == 0){
-		return false;
-	}else{
-		return true;
-	}
 }
 
 void chunk_data_sync  (struct sync_chunk_t* c){
@@ -568,6 +560,6 @@ void chunk_data_unsync(struct sync_chunk_t* c){
 	pthread_mutex_unlock(&c->c_mutex);
 }
 
-void trigger_chunk_update (){
+void trigger_builder_update (){
 	pthread_cond_broadcast(&chunk_builder_lock);
 }

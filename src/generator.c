@@ -92,9 +92,9 @@ void generate_chunk_data () {
 					j->data->_z = z_global;
 					CLL_add(&chunk_list[2], j->data);
 					
-					chunk_data_unsync(j->data);
-					
+					struct CLL_element* temp = j;
 					j = j->nxt;
+					chunk_data_unsync(temp->data);
 				}
 			}
 			
@@ -164,6 +164,7 @@ void generate_chunk_data () {
 	// When Generation is done, rebuild Meshes for all Chunks who neighbour the new ones
 	lock_list(&chunk_list[1]);
 	for(p = chunk_list[2].first; p != NULL; p = p->nxt){
+		chunk_data_sync(p->data);
 		
 		int chunk_x = p->data->_x;
 		int chunk_z = p->data->_z;
@@ -180,10 +181,11 @@ void generate_chunk_data () {
 			}
 		}
 		
+		chunk_data_unsync(p->data);
 	}
 	unlock_list(&chunk_list[1]);
 	
-	trigger_chunk_update(); //Clear up the borders
+	trigger_builder_update(); //Clear up the borders
 	
 	unlock_list(&chunk_list[2]);
 }

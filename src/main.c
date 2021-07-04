@@ -39,15 +39,12 @@ int main () {
 	xg_window_show();
 	xg_cursor_visible(false);
 	
-	printf ("Loading Bitmap Font 'font.bmp' ... \n");
-	loadfont("font.bmp", GL_LINEAR);
-	
 	printf ("Loading BTD 'blockdef.btd' ...\n");
 	loadblockdef("blockdef.btd");
 	
-	printf("Initializing Builder Thread ...\n");
-	if(!initialize_chunk_thread()){
-		printf("Failed to initialize Chunk Thread!\n");
+	printf("Initializing Builder Threads ...\n");
+	if(!initialize_builder_thread()){
+		printf("Failed to initialize Builder Threads!\n");
 		exit(-1);
 	}
 	
@@ -60,6 +57,7 @@ int main () {
 	printf("Initializing GST ...\n");
 	init_game();
 	
+	// The GameState setup on startup
 	input_state  = &world_input_state;
 	render_state = &world_render_state;
 	debug_overlay_state = &debug_fps_pos_state;
@@ -83,8 +81,8 @@ int main () {
 	
 	printf("Terminating Generator Thread ...\n");
 	terminate_generator_thread();
-	printf("Terminating Builder Thread ...\n");
-	terminate_chunk_thread();
+	printf("Terminating Builder Threads ...\n");
+	terminate_builder_thread();
 
 	return 0;
 }

@@ -21,11 +21,10 @@ void loadblockdef (char* filename){
 	}
 	
 	for(int i = 0; i < BLOCK_TYPE_COUNT; i++){
-		char nums [6] [3];
-		fscanf ( btd_file, "%s %s %s %s %s %s", nums[0], nums[1], nums[2], nums[3], nums[4], nums[5]);
+		int nums [6];
+		fscanf ( btd_file, "%i %i %i %i %i %i", &nums[0], &nums[1], &nums[2], &nums[3], &nums[4], &nums[5]);
 		for(int k = 0; k < 6; k++){
-			char *p;
-			btd_map[i].index[k] =  (uint8_t) strtol( nums[k], &p, 10);
+			btd_map[i].index[k] =  (uint8_t)nums[k];
 		}
 		
 	}
