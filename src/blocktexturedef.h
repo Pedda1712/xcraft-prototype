@@ -18,6 +18,9 @@ struct blocktexdef_t {
 
 extern struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT];
 
+#define MAX_BLOCKNAME_LENGTH 50
+extern char blockname_map [BLOCK_TYPE_COUNT] [MAX_BLOCKNAME_LENGTH];
+
 void loadblockdef (char* filename);
 
 #endif

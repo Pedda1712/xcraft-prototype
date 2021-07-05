@@ -2,6 +2,7 @@
 #include <worlddefs.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT] = { // Default BTD values
 	{{255, 255, 255, 255, 255, 255}}, // Air
@@ -10,6 +11,15 @@ struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT] = { // Default BTD values
 	{{3, 3, 3, 3, 3, 3}}, // Stone
 	{{4, 4, 4, 4, 4, 4}}, // Gravel
 	{{5, 5, 5, 5, 5, 5}}  // Water
+};
+
+char blockname_map [BLOCK_TYPE_COUNT] [MAX_BLOCKNAME_LENGTH] = {
+	"Air",
+	"Grass",
+	"Dirt",
+	"Stone",
+	"Gravel",
+	"Water"
 };
 
 void loadblockdef (char* filename){
@@ -21,8 +31,10 @@ void loadblockdef (char* filename){
 	}
 	
 	for(int i = 0; i < BLOCK_TYPE_COUNT; i++){
+		char name[MAX_BLOCKNAME_LENGTH];
 		int nums [6];
-		fscanf ( btd_file, "%i %i %i %i %i %i", &nums[0], &nums[1], &nums[2], &nums[3], &nums[4], &nums[5]);
+		fscanf ( btd_file, "%s %i %i %i %i %i %i", name, &nums[0], &nums[1], &nums[2], &nums[3], &nums[4], &nums[5]);
+		memcpy(blockname_map[i], name, MAX_BLOCKNAME_LENGTH);
 		for(int k = 0; k < 6; k++){
 			btd_map[i].index[k] =  (uint8_t)nums[k];
 		}
