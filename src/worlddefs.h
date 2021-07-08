@@ -2,7 +2,7 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 12
+#define WORLD_RANGE 6
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
@@ -63,9 +63,9 @@ struct sync_chunk_t {
 
 	/*
 		0 -> Chunk Mesh 
-		1 -> Chunk Mesh (double buffer)
+		1 -> Chunk Mesh (float buffer)
 		2 -> Water Mesh
-		3 -> Water Mesh (double buffer)
+		3 -> Water Mesh (float buffer)
 	 */
 	bool rendermesh;
 	struct DFA vertex_array[MESH_LEVELS]; 

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <GL/gl.h>
+#include <physics.h>
 extern struct game_state_t {
 	float _player_fov;
 	float _player_x;
@@ -19,6 +20,7 @@ extern struct game_state_t {
 	GLuint _atlas_texture;
 	float _skycolor[4];
 	int32_t _selected_block;
+	struct pbox_t _player_box;
 } gst;
 
 extern void (*input_state) (float);

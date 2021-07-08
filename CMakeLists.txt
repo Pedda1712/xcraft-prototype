@@ -18,6 +18,7 @@ set (CLIENT_SOURCES
 	${CMAKE_SOURCE_DIR}/src/bmpfont.c
 	${CMAKE_SOURCE_DIR}/src/game.c
 	${CMAKE_SOURCE_DIR}/src/player.c
+	${CMAKE_SOURCE_DIR}/src/physics.c
 )
 
 add_executable(xcraft ${CLIENT_SOURCES})

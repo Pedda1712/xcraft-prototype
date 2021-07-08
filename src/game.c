@@ -73,38 +73,126 @@ void world_input_state  (float frameTime){
 	gst._dir_y = sin(gst._angle_y);
 	gst._dir_z = cos(gst._angle_y) * sin(gst._angle_x);
 	
+	float dirwalkcomplength = sqrt(gst._dir_x * gst._dir_x + gst._dir_z * gst._dir_z);
 	float _strafe_x, _strafe_z; // Cross Product of _dir and (0, 1, 0) -> _strafe_y would always be 0
 	_strafe_x = -gst._dir_z;
 	_strafe_z = gst._dir_x;
 	float _strafe_length = sqrt(_strafe_x * _strafe_x + _strafe_z * _strafe_z);
 	_strafe_x /= _strafe_length;
 	_strafe_z /= _strafe_length;
-
-	float p_speed;
+	
+	float vely = 0.0f;
+	float velx = 0.0f;
+	float velz = 0.0f;
 	if(xg_keyboard_modif(XK_Shift_L)){
-		p_speed = P_SHIFT_SPEED;
-	}else{
-		p_speed = P_SPEED;
+		//p_speed = P_SHIFT_SPEED;
+		vely = -10.f;
+	}
+	if(xg_keyboard_ascii(' ')){
+		vely  = 10.f;
 	}
 	if(xg_keyboard_ascii('w')){
-		gst._player_x += gst._dir_x * frameTime * p_speed;
-		gst._player_y += gst._dir_y * frameTime * p_speed;
-		gst._player_z += gst._dir_z * frameTime * p_speed;
-	}  
+		velx += 10.0f * (gst._dir_x / dirwalkcomplength);
+		velz += 10.0f * (gst._dir_z / dirwalkcomplength);
+	}
 	if(xg_keyboard_ascii('s')){
-		gst._player_x -= gst._dir_x * frameTime * p_speed;
-		gst._player_y -= gst._dir_y * frameTime * p_speed;
-		gst._player_z -= gst._dir_z * frameTime * p_speed;
+		velx -= 10.0f * (gst._dir_x / dirwalkcomplength);
+		velz -= 10.0f * (gst._dir_z / dirwalkcomplength);
 	}
 	if(xg_keyboard_ascii('d')){
-		gst._player_x += _strafe_x * frameTime * p_speed;
-		gst._player_z += _strafe_z * frameTime * p_speed;
+		velx += 10.0f * _strafe_x;
+		velz += 10.0f * _strafe_z;
 	}
 	if(xg_keyboard_ascii('a')){
-		gst._player_x -= _strafe_x * frameTime * p_speed;
-		gst._player_z -= _strafe_z * frameTime * p_speed;
+		velx -= 10.0f * _strafe_x;
+		velz -= 10.0f * _strafe_z;
 	}
 	
+	/*
+		Collision Detection:
+	 */
+	
+	uint8_t potential_colliders [63];
+	int colx [63];int coly [63];int colz [63];
+	int ox, oy, oz;
+	get_world_section_around ((int)gst._player_x, (int)gst._player_y, (int)gst._player_z, potential_colliders, colx, coly, colz, &ox, &oy, &oz);
+	
+	gst._player_box._x = (gst._player_x - ox) - gst._player_box._w/2;
+	gst._player_box._y = (gst._player_y - oy) - gst._player_box._h + 0.15f;
+	gst._player_box._z = (gst._player_z - oz) - gst._player_box._l/2;
+	
+	float smallest = 1.0f;
+	for (int i = 0; i < 63; i++){ // Test for any X-Collisions
+		
+		if(potential_colliders[i] != AIR_B){
+			
+			struct pbox_t block_collider = {
+				colx[i], coly[i], colz[i],
+				1.0f, 1.0f, 1.0f
+			};
+			
+			float coltime = x_swept_collision (gst._player_box, block_collider, velx * frameTime);
+			
+			if (coltime < smallest){
+				smallest = coltime;
+			}
+			
+		}
+		
+	}
+	
+	gst._player_x += velx * frameTime * smallest; // Move along X-Axis
+
+	gst._player_box._x = (gst._player_x - ox) - gst._player_box._w/2;
+	gst._player_box._y = (gst._player_y - oy) - gst._player_box._h + 0.15f;
+	gst._player_box._z = (gst._player_z - oz) - gst._player_box._l/2;
+	
+	smallest = 1.0f;
+	for (int i = 0; i < 63; i++){ // Test for any Z-Collisions
+		
+		if(potential_colliders[i] != AIR_B){
+			
+			struct pbox_t block_collider = {
+				colx[i], coly[i], colz[i],
+				1.0f, 1.0f, 1.0f
+			};
+						
+			float coltime = z_swept_collision (gst._player_box, block_collider, velz * frameTime);
+			
+			if (coltime < smallest){
+				smallest = coltime;
+			}
+			
+		}
+		
+	}
+	gst._player_z += velz * frameTime * smallest; // Move along Z-Axis
+	
+	gst._player_box._x = (gst._player_x - ox) - gst._player_box._w/2;
+	gst._player_box._y = (gst._player_y - oy) - gst._player_box._h + 0.15f;
+	gst._player_box._z = (gst._player_z - oz) - gst._player_box._l/2;
+	
+	smallest = 1.0f;
+	for (int i = 0; i < 63; i++){ // Test for any Y-Collisions
+		
+		if(potential_colliders[i] != AIR_B){
+			
+			struct pbox_t block_collider = {
+				colx[i], coly[i], colz[i],
+				1.0, 1.0, 1.0
+			};
+			
+			float coltime = y_swept_collision (gst._player_box, block_collider, vely * frameTime);
+			
+			if (coltime < smallest){
+				smallest = coltime;
+			}
+			
+		}
+		
+	}
+	gst._player_y += vely * frameTime * smallest; // Finally: Move along Y-Axis to complete the movement
+
 }
 
 void world_render_state (){
@@ -131,7 +219,7 @@ void world_render_state (){
 	
 	glMatrixMode(GL_PROJECTION);  
 	glLoadIdentity();
-	gluPerspective(gst._player_fov,(GLdouble)width/(GLdouble)height,0.1,500.0);
+	gluPerspective(gst._player_fov,(GLfloat)width/(GLfloat)height,0.1,500.0);
 	
 	glBindTexture(GL_TEXTURE_2D, gst._atlas_texture);
 	
@@ -169,11 +257,11 @@ void debug_fps_pos_state(float frameTime){
 	setupfont();
 	
 	char fps_txt [50];
+	drawstring("XCraft build-08/07/21", 0.0f, 0.0f, 0.44f);
 	sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
-	drawstring(fps_txt, 0.0f, 0.0f, 0.44f);
-	sprintf(fps_txt, "CX: %i, CZ: %i", gst._p_chunk_x, gst._p_chunk_z);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
-	drawstring("BUILD-05/07/21", 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 2, 0.44f);
+ 	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);
+	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 2, 0.44f);
 	drawstring(blockname_map[gst._selected_block], 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 3, 0.44f);
 	
 	revertfont();
@@ -182,9 +270,9 @@ void debug_fps_pos_state(float frameTime){
 
 void init_game () {
 	// To be moved into Save/Config files eventually ...
-	gst._player_x = 0.0f;
-	gst._player_y = 64.0f;
-	gst._player_z = 0.0f;
+	gst._player_x = 11.0f;
+	gst._player_y = 66.0f;
+	gst._player_z = 11.0f;
 	gst._p_chunk_x = 0;
 	gst._p_chunk_z = 0;
 	gst._dir_x = 0.0f;
@@ -195,6 +283,10 @@ void init_game () {
 	gst._player_fov = 70.0f;
 	gst._player_range = 10;
 	gst._selected_block = 1;
+	
+	gst._player_box._w = 0.5;
+	gst._player_box._h = 1.8;
+	gst._player_box._l = 0.5;
 	
 	xg_set_button1_callback (&break_callback);
 	xg_set_button3_callback (&place_callback);
