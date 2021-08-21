@@ -15,7 +15,6 @@ uint16_t font_pixel_w, font_pixel_h;
 
 GLuint font_texture;
 GLuint loadfont (char* fn, GLint font_filter){
-	
 	uint8_t* font_image_data = loadBMP (fn, &font_atlas_w, &font_atlas_h);
 	
 	font_pixel_w = font_atlas_w / 16;
@@ -57,12 +56,11 @@ GLuint loadfont (char* fn, GLint font_filter){
 }
 
 void drawchar (char c, float x, float y, float scale){
-	
 	x = (x * 2) - 1.0f;
 	y = ((1.0f - y) * 2) - 1.0f;
 	
-	uint32_t tex_coord_start_x = (c * font_pixel_w) % font_atlas_w;
-	uint32_t tex_coord_start_y = ((c * font_pixel_w) / font_atlas_w) * font_pixel_h;
+	uint32_t tex_coord_start_x = ((uint8_t)c * font_pixel_w) % font_atlas_w;
+	uint32_t tex_coord_start_y = (((uint8_t)c * font_pixel_w) / font_atlas_w) * font_pixel_h;
 	
 	glBegin (GL_QUADS);
 	
@@ -76,16 +74,22 @@ void drawchar (char c, float x, float y, float scale){
 	glVertex2f (x, y - CHARACTER_BASE_SIZE_Y * scale);
 	
 	glEnd();
-	
 }
 
 void drawstring (char* str, float x, float y, float scale){
 	uint32_t str_len = strlen (str);
 	
 	for(uint32_t i = 0; i < str_len; i++){
-		drawchar(str[i], x + i * CHARACTER_BASE_SIZE_X * scale * 0.5f, y * 0.5f, scale);
+		drawchar(str[i], x * 0.5f + i * CHARACTER_BASE_SIZE_X * scale * 0.5f, y * 0.5f, scale);
 	}
-	
+}
+
+void drawtextpg (struct paragraph_t* t, float x, float y, float scale){
+	for(uint16_t i = 0; i < t->width; ++i){
+		for (uint16_t j = 0; j < t->height; ++j){
+			drawchar(t->chars[j * t->width + i], x * 0.5f + i * CHARACTER_BASE_SIZE_X * scale * 0.5f, (y * 0.5f + j * CHARACTER_BASE_SIZE_Y * scale * 0.5f), scale);
+		}
+	}
 }
 
 void setupfont (){
@@ -108,4 +112,40 @@ void revertfont (){
 
 void setfont(GLuint tex){
 	font_texture = tex;
+	glBindTexture(GL_TEXTURE_2D, font_texture);
+}
+
+struct paragraph_t* PG_create (uint16_t width, uint16_t height){
+	struct paragraph_t* pg = malloc(sizeof(struct paragraph_t));
+	pg->width = width;pg->height = height;
+	
+	pg->chars = malloc(sizeof(char) * height * width);
+	memset (pg->chars, 0, height * width);
+	return pg;
+}
+
+void PG_free (struct paragraph_t* pg){
+	
+	free(pg->chars);
+	free(pg);
+	
+}
+
+void PG_button_fill (struct paragraph_t* pg, uint8_t b_base){
+	
+	for (int x = 0; x < pg->width; x++){
+		for(int y = 0; y < pg->height;y++){
+			uint32_t ind = y * pg->width + x;
+			
+			uint8_t tile = b_base;
+			if (y == 0){tile -= 16;}
+			if (y == pg->height - 1){tile += 16;}
+			if (x == 0){tile--;}
+			if (x == pg->width - 1) {tile++;}
+			
+			pg->chars[ind] = tile;
+			
+		}
+	}
+	
 }

@@ -504,10 +504,8 @@ void* builder_thread_func (void* arg){
 }
 
 bool initialize_builder_thread (){
-	chunk_list[0] = CLL_init();
-	chunk_list[1] = CLL_init();
-	chunk_list[2] = CLL_init();
-	chunk_list[3] = CLL_init();
+	
+	for(int i = 0; i < NUMLISTS; i++){chunk_list[i] = CLL_init();}
 	
 	pthread_cond_init(&chunk_builder_lock, NULL);
 	

@@ -48,13 +48,13 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 	
 	struct CLL_element* p;
 	for(p = calc_list.first; p != NULL; p = p->nxt){ // Delete Existing Light Data
-		memset (p->data->light_temp.block_data, MIN_LIGHT, CHUNK_MEM);
+		memset (p->data->light.block_data, MIN_LIGHT, CHUNK_MEM);
 	}
 	(*calc_func)(&calc_list);
 	
 	struct sync_chunk_t* cpy = CLL_getDataAt(&calc_list ,for_chunk->_x, for_chunk->_z);
 	if(cpy != NULL){ // Should never fail
-		memcpy(for_chunk->light.block_data, cpy->light_temp.block_data, CHUNK_MEM); // Copy from temp to actual light buffer
+		memcpy(for_chunk->light.block_data, cpy->light.block_data, CHUNK_MEM); // Copy from temp to actual light buffer
 	}
 	
 	CLL_freeListAndData(&calc_list); // AndData, to delete the copies
@@ -66,12 +66,12 @@ void rec_skylight_func_down (struct sync_chunk_t* sct, int x, int y, int z, uint
 
 	
 	if (llevel == MIN_LIGHT) return;
-	if (sct->light_temp.block_data[ATBLOCK(x, y, z)] >= llevel) return;
+	if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel) return;
 	if (sct->data.block_data [ATBLOCK(x, y, z)] != AIR_B) return;
 	
 	uint8_t down_fac = 0;
 
-	sct->light_temp.block_data[ATBLOCK(x, y, z)] = llevel;
+	sct->light.block_data[ATBLOCK(x, y, z)] = llevel;
 	
 	if (y-1 >= 0) {
 		if (sct->water.block_data [ATBLOCK(x, y-1, z)] == WATER_B) down_fac = 1; // Light doesnt "flow" freely through water
@@ -84,12 +84,12 @@ void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int z, uin
 
 	
 	if (llevel == MIN_LIGHT) return;
-	if (sct->light_temp.block_data[ATBLOCK(x, y, z)] > llevel) return;
-	if (sct->light_temp.block_data[ATBLOCK(x, y, z)] >= llevel && !fromup) return;
+	if (sct->light.block_data[ATBLOCK(x, y, z)] > llevel) return;
+	if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel && !fromup) return;
 	if (sct->data.block_data [ATBLOCK(x, y, z)] != AIR_B) return;
 
 	
-	sct->light_temp.block_data[ATBLOCK(x, y, z)] = llevel;
+	sct->light.block_data[ATBLOCK(x, y, z)] = llevel;
 	
 	uint8_t down_fac = 0;
 	

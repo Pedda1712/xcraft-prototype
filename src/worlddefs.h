@@ -2,7 +2,7 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 6
+#define WORLD_RANGE 8
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
@@ -59,7 +59,6 @@ struct sync_chunk_t {
 	struct chunk_t data;
 	struct chunk_t water;
 	struct chunk_t light;
-	struct chunk_t light_temp;
 
 	/*
 		0 -> Chunk Mesh 

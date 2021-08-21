@@ -7,14 +7,18 @@
 #include <blocktexturedef.h>
 #include <windowglobals.h>
 #include <bmpfont.h>
+#include <ui.h>
 #include <globallists.h>
 #include <bmp24.h>
 #include <math.h>
-#include <xgame.h>
 #include <player.h>
+#include <genericlist.h>
+
+#include <xcraft_window_module.h>
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 // To be moved into a config file at some point
 #define P_SPEED 10.0f
@@ -23,8 +27,25 @@
 void (*input_state) (float);
 void (*render_state)();
 void (*debug_overlay_state)(float);
+void (*overlay_state) ();
 
 struct game_state_t gst;
+
+void empty(){}
+struct GLL current_button_list;
+
+void menu_action_callback (bool pressed){
+	if (pressed) {
+		for( struct GLL_element* e = current_button_list.first; e != NULL; e = e->next){
+		
+		struct button_t* bt = (struct button_t*)e->data;
+			if ( gst._mouse_x > bt->_x && gst._mouse_x < (bt->_x + bt->forg->width * CHARACTER_BASE_SIZE_X * bt->_scale) && gst._mouse_y > bt->_y && gst._mouse_y < ((bt->_y + bt->forg->height * CHARACTER_BASE_SIZE_Y * bt->_scale)) ){
+				bt->clicked_func();
+			}
+		
+		}
+	}
+}
 
 void break_callback (bool pressed){
 	if(pressed){
@@ -53,6 +74,20 @@ void prevblock_callback (bool pressed){
 	}
 }
 
+void transistion_to_game () {
+	xg_set_button1_callback (&break_callback);
+	xg_set_button3_callback (&place_callback);
+	xg_set_button4_callback (&prevblock_callback);
+	xg_set_button5_callback (&nextblock_callback);
+	
+	xg_cursor_set(false, 0);
+	
+	input_state  = &world_input_state;
+	render_state = &world_render_state;
+	debug_overlay_state = &debug_fps_pos_state;
+	overlay_state = &empty;
+}
+
 void world_input_state  (float frameTime){
 	
 	if(xg_keyboard_ascii((char)XK_Escape)) {
@@ -63,15 +98,17 @@ void world_input_state  (float frameTime){
 	xg_mouse_position(&offset_x, &offset_y);
 	offset_x -= width/2;
 	offset_y -= height/2;
-	gst._angle_x += offset_x * 0.001f;
-	gst._angle_y += offset_y * -0.001f;
-	if(gst._angle_y > 3.14159f/2.01f)  gst._angle_y = 3.14159f/2.01f;
-	if(gst._angle_y < -3.14159f/2.01f) gst._angle_y = -3.14159f/2.01f;
+	gst._angle_x += offset_y * -0.001f;
+	gst._angle_y += offset_x * 0.001f;
+	if(gst._angle_x >  3.14159f/2.01f) gst._angle_x = 3.14159f/2.01f;
+	if(gst._angle_x < -3.14159f/2.01f) gst._angle_x = -3.14159f/2.01f;
+	if(gst._angle_y > 6.28318f) gst._angle_y = 0.0f;
+	if(gst._angle_y < 0.0f    ) gst._angle_y = 6.28318f;
 	xg_set_mouse_position( width/2, height/2 );
 	
-	gst._dir_x = cos(gst._angle_y) * cos(gst._angle_x);
-	gst._dir_y = sin(gst._angle_y);
-	gst._dir_z = cos(gst._angle_y) * sin(gst._angle_x);
+	gst._dir_x = cos(gst._angle_x) * cos(gst._angle_y);
+	gst._dir_y = sin(gst._angle_x);
+	gst._dir_z = cos(gst._angle_x) * sin(gst._angle_y);
 	
 	float dirwalkcomplength = sqrt(gst._dir_x * gst._dir_x + gst._dir_z * gst._dir_z);
 	float _strafe_x, _strafe_z; // Cross Product of _dir and (0, 1, 0) -> _strafe_y would always be 0
@@ -252,34 +289,64 @@ void world_render_state (){
 	}
 }
 
-void debug_fps_pos_state(float frameTime){
+void menu_input_state (float fTime){
+	int32_t offset_x, offset_y;
+	xg_mouse_position(&offset_x, &offset_y);
 	
+	gst._mouse_x = ((float)offset_x / width) * 2;
+	gst._mouse_y = ((float)offset_y / height) * 2;
+}
+
+void menu_overlay_state (){
+	
+	setupfont();
+	setfont(gst._gfx_font);
+	
+	for( struct GLL_element* e = current_button_list.first; e != NULL; e = e->next){
+		
+		struct button_t* bt = (struct button_t*)e->data;
+		if ( gst._mouse_x > bt->_x && gst._mouse_x < (bt->_x + bt->forg->width * CHARACTER_BASE_SIZE_X * bt->_scale) && gst._mouse_y > bt->_y && gst._mouse_y < ((bt->_y + bt->forg->height * CHARACTER_BASE_SIZE_Y * bt->_scale)) ){
+			drawtextpg(bt->backh, bt->_x, bt->_y, bt->_scale);
+			bt->highlighted_func();
+		} else {
+			drawtextpg(bt->backg, bt->_x, bt->_y, bt->_scale);
+		}
+		drawtextpg(bt->forg, bt->_x, bt->_y, bt->_scale);
+		
+	}
+	
+	revertfont();
+}
+
+void debug_fps_pos_state(float frameTime){
 	setupfont();
 	
 	char fps_txt [50];
-	drawstring("XCraft build-08/07/21", 0.0f, 0.0f, 0.44f);
-	sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
+	setfont(gst._gfx_font);
+	drawstring("XCraft build-21/08/21", 0.0f, 0.0f, 0.44f);
+	/*sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
  	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 2, 0.44f);
-	drawstring(blockname_map[gst._selected_block], 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 3, 0.44f);
+	sprintf(fps_txt, "YAW:%f, PITCH:%f", gst._angle_y, gst._angle_x);
+	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 3, 0.44f);*/
+	drawstring(blockname_map[gst._selected_block], 0.0f, 2.0f - CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
 	
 	revertfont();
-	
 }
 
 void init_game () {
 	// To be moved into Save/Config files eventually ...
-	gst._player_x = 11.0f;
-	gst._player_y = 66.0f;
-	gst._player_z = 11.0f;
+	gst._player_x = 6.32f;
+	gst._player_y = 52.7f;
+	gst._player_z = 26.8f;
 	gst._p_chunk_x = 0;
 	gst._p_chunk_z = 0;
-	gst._dir_x = 0.0f;
-	gst._dir_y = 0.0f;
-	gst._dir_z = 0.0f;
-	gst._angle_x = 3.14159f/2;
-	gst._angle_y = 0.0f;
+	gst._angle_x = 0.31f;
+	gst._angle_y = 5.44f;
+	gst._dir_x = cos(gst._angle_x) * cos(gst._angle_y);
+	gst._dir_y = sin(gst._angle_x);
+	gst._dir_z = cos(gst._angle_x) * sin(gst._angle_y);
 	gst._player_fov = 70.0f;
 	gst._player_range = 10;
 	gst._selected_block = 1;
@@ -288,10 +355,7 @@ void init_game () {
 	gst._player_box._h = 1.8;
 	gst._player_box._l = 0.5;
 	
-	xg_set_button1_callback (&break_callback);
-	xg_set_button3_callback (&place_callback);
-	xg_set_button4_callback (&prevblock_callback);
-	xg_set_button5_callback (&nextblock_callback);
+	xg_set_button1_callback (&menu_action_callback);
 	
 	struct chunkspace_position pos = {0,0};
 	// Generate the initial Chunks on the main thread
@@ -320,18 +384,24 @@ void init_game () {
 	glBlendColor(0.33f,0.33f,0.0f,1.0f);
 	
 	//Loading a Texture
-	uint32_t iw, ih;
-	uint8_t* image = loadBMP("atlas.bmp",&iw,&ih);
-	glGenTextures(1, &gst._atlas_texture);
-	glBindTexture(GL_TEXTURE_2D, gst._atlas_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, iw, ih, 0, GL_BGR, GL_UNSIGNED_BYTE, image);
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	free (image);
-	
-	loadfont("font.bmp", GL_LINEAR);
+	gst._atlas_texture = loadfont ("atlas.bmp", GL_NEAREST);
+	gst._text_font     = loadfont("font.bmp", GL_LINEAR);
+	gst._gfx_font      = loadfont("font.bmp", GL_NEAREST);
 	
 	glClearColor(gst._skycolor[0],gst._skycolor[1],gst._skycolor[2],gst._skycolor[3]);
+	
+	// Creating Main Menu Button List 
+	
+	float ccaligned ( char* s, float sc ) {return (1.0f - (strlen(s) + 2) * sc * CHARACTER_BASE_SIZE_X * 0.5f);}
+	
+	current_button_list = GLL_init();
+	GLL_add ( &current_button_list, ui_create_button_fit ( ccaligned("XCraft", UI_TITLE_SCALE), 0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f, UI_TITLE_SCALE, BUTTON1_OFFSET, BUTTON1_OFFSET, "XCraft", &empty, &empty) );
+	GLL_add ( &current_button_list, ui_create_button_fit ( ccaligned("Play", UI_SCALE)        , 1.0f, UI_SCALE      , BUTTON6_OFFSET, BUTTON7_OFFSET, "Play"  , &empty, &transistion_to_game
+	) );
+	GLL_add ( &current_button_list, ui_create_button_fit ( ccaligned("Quit", UI_SCALE)        , 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE      , BUTTON4_OFFSET, BUTTON5_OFFSET, "Quit"  , &empty, &xg_window_stop) );
+	
+}
+
+void exit_game () {
+	GLL_free_rec (&current_button_list);
 }

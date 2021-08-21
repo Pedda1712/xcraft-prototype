@@ -1,5 +1,5 @@
-#ifndef XGAME_LIB
-#define XGAME_LIB
+#ifndef XCRAFTWM
+#define XCRAFTWM
 
 #include <stdbool.h>
 
@@ -30,7 +30,7 @@ bool xg_keyboard_ascii (uint32_t key);
 bool xg_keyboard_modif (uint32_t keysym);
 void xg_mouse_position (int32_t* x,int32_t* y);
 void xg_set_mouse_position (int32_t x, int32_t y);
-void xg_cursor_visible (bool vis);
+void xg_cursor_set (bool vis, uint8_t shape);
 
 void emptyfnc (bool b);
 void xg_set_button1_callback (void (*fncptr)(bool));

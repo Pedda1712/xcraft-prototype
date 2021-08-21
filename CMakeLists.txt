@@ -19,9 +19,11 @@ set (CLIENT_SOURCES
 	${CMAKE_SOURCE_DIR}/src/game.c
 	${CMAKE_SOURCE_DIR}/src/player.c
 	${CMAKE_SOURCE_DIR}/src/physics.c
+	${CMAKE_SOURCE_DIR}/src/ui.c
+	${CMAKE_SOURCE_DIR}/src/genericlist.c
 )
 
 add_executable(xcraft ${CLIENT_SOURCES})
 target_compile_options(xcraft PUBLIC -O2 -Wall -Wextra -no-pie)
-target_link_libraries(xcraft -lxgame -lX11 -lGL -lGLU -lm -lpthread)
+target_link_libraries(xcraft -lxcraftwm -lX11 -lGL -lGLU -lm -lpthread)
 

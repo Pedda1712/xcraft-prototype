@@ -14,6 +14,9 @@ void get_next_block_in_direction (float posx, float posy, float posz, float dirx
 
 bool break_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, float ax, float ay, float az);
 bool place_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, float ax, float ay, float az);
+
+#define RAY_ACTION_LENGTH 10
 void block_ray_actor (bool (*action_func)(int, int, int, int, int, float, float, float));
+
 
 #endif

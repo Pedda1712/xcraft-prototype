@@ -12,12 +12,10 @@ void get_next_block_in_direction (float posx, float posy, float posz, float dirx
 
 	float xfac, yfac, zfac;
 	float dist;
-	int sign;
 
 	float x_nx = 0.0f;float x_ny = 0.0f;float x_nz = 0.0f;
 	if(dirx != 0.0f){
-		sign = (dirx >= 0) ? 1 : 0;
-		x_nx = ix + sign;
+		x_nx = ix + ((dirx >= 0) ? 1 : 0);
 		dist = x_nx - posx;
 		yfac = diry/dirx;
 		zfac = dirz/dirx;
@@ -27,8 +25,7 @@ void get_next_block_in_direction (float posx, float posy, float posz, float dirx
 	
 	float z_nx = 0.0f;float z_ny = 0.0f;float z_nz = 0.0f;
 	if(dirz != 0.0f){
-		sign = (dirz >= 0) ? 1 : 0;
-		z_nz = iz + sign;
+		z_nz = iz + ((dirz >= 0) ? 1 : 0);
 		dist = z_nz - posz;
 		yfac = diry/dirz;
 		xfac = dirx/dirz;
@@ -38,8 +35,7 @@ void get_next_block_in_direction (float posx, float posy, float posz, float dirx
 	
 	float y_nx = 0.0f;float y_ny = 0.0f;float y_nz = 0.0f;
 	if(diry != 0.0f){
-		sign = (diry >= 0) ? 1 : 0;
-		y_ny = iy + sign;
+		y_ny = iy + ((diry >= 0) ? 1 : 0);
 		dist = y_ny - posy;
 		zfac = dirz/diry;
 		xfac = dirx/diry;
@@ -179,7 +175,7 @@ void block_ray_actor (bool (*action_func)(int, int, int, int, int, float, float,
 	float ay = gst._player_y;
 	float az = gst._player_z;
 	
-	for(int i = 0; i < 10; i++){
+	for(int i = 0; i < RAY_ACTION_LENGTH; i++){
 		
 		ax += gst._dir_x * 0.01f; // If we dont do this offset bias, get_next_block_in_direction wont be able to travel accross block boundaries for negative directions 
 		ay += gst._dir_y * 0.01f;

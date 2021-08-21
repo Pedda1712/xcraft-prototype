@@ -2,8 +2,10 @@
 #define GAME
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <GL/gl.h>
 #include <physics.h>
+
 extern struct game_state_t {
 	float _player_fov;
 	float _player_x;
@@ -14,10 +16,14 @@ extern struct game_state_t {
 	float _dir_z;
 	float _angle_x;
 	float _angle_y;
+	float _mouse_x;
+	float _mouse_y;
 	int32_t _p_chunk_x;
 	int32_t _p_chunk_z;
 	int32_t _player_range;
 	GLuint _atlas_texture;
+	GLuint _text_font;
+	GLuint _gfx_font;
 	float _skycolor[4];
 	int32_t _selected_block;
 	struct pbox_t _player_box;
@@ -25,12 +31,20 @@ extern struct game_state_t {
 
 extern void (*input_state) (float);
 extern void (*render_state)();
+extern void (*overlay_state)();
 extern void (*debug_overlay_state)(float);
 
 void init_game ();
+void exit_game ();
+
+void empty ();
 
 void world_input_state  (float fTime);
 void world_render_state ();
 void debug_fps_pos_state(float fTime);
+
+void menu_input_state (float fTime);
+void menu_overlay_state ();
+
 
 #endif
