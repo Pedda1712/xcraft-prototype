@@ -2,7 +2,7 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 8
+#define WORLD_RANGE 12
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
@@ -17,7 +17,7 @@
 
 #define WATER_SURFACE_OFFSET (1.0f/8.0f)
 
-#define MAX_LIGHT 9
+#define MAX_LIGHT 12
 #define MIN_LIGHT 1
 
 #define BLOCK_TYPE_COUNT 6

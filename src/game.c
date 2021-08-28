@@ -13,6 +13,7 @@
 #include <math.h>
 #include <player.h>
 #include <genericlist.h>
+#include <worldsave.h>
 
 #include <xcraft_window_module.h>
 
@@ -321,9 +322,9 @@ void menu_overlay_state (){
 void debug_fps_pos_state(float frameTime){
 	setupfont();
 	
-	char fps_txt [50];
+	//char fps_txt [50];
 	setfont(gst._gfx_font);
-	drawstring("XCraft build-21/08/21", 0.0f, 0.0f, 0.44f);
+	drawstring("XCraft build-28/08/21", 0.0f, 0.0f, 0.44f);
 	/*sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
  	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);
@@ -384,7 +385,7 @@ void init_game () {
 	glBlendColor(0.33f,0.33f,0.0f,1.0f);
 	
 	//Loading a Texture
-	gst._atlas_texture = loadfont ("atlas.bmp", GL_NEAREST);
+	gst._atlas_texture = loadfont("atlas.bmp", GL_NEAREST);
 	gst._text_font     = loadfont("font.bmp", GL_LINEAR);
 	gst._gfx_font      = loadfont("font.bmp", GL_NEAREST);
 	

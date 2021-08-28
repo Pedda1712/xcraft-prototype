@@ -3,6 +3,7 @@
 #include <chunkbuilder.h>
 #include <pnoise.h>
 #include <lightcalc.h>
+#include <worldsave.h>
 
 #include <pthread.h>
 
@@ -77,6 +78,10 @@ void generate_chunk_data () {
 		chunk_data_unsync(e->data);
 	}
 	
+	for (struct CLL_element* e = or_chunks.first; e != NULL; e = e->nxt){
+		dump_chunk(e->data);
+	}
+	
 	// Reassign out of range chunks to positions that dont have one yet and add them to the generation queue (chunk_list[2])
 	struct CLL_element* j;
 	j = or_chunks.first;
@@ -114,50 +119,57 @@ void generate_chunk_data () {
 		int x = p->data->_x;
 		int z = p->data->_z;
 		
-		for(int cx = 0; cx < CHUNK_SIZE;++cx){
-			for(int cz = 0; cz < CHUNK_SIZE;++cz){
-				bool under_sky = true;
-				int depth_below = 0;
-				
-				uint8_t top_layer_block = GRASS_B; //Grass
-				uint8_t sec_layer_block = DIRT_B;  //Dirt 
-				uint8_t thr_layer_block = STONE_B; //Stone
-				uint8_t liquid_layer    = WATER_B; //Water
-				
-				for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
+		if( !read_chunk (p->data) ){
+			for(int cx = 0; cx < CHUNK_SIZE;++cx){
+				for(int cz = 0; cz < CHUNK_SIZE;++cz){
+					bool under_sky = true;
+					int depth_below = 0;
 					
-					if( cy < WATER_LEVEL + 2){
-						top_layer_block = GRAVEL_B; //Gravel
-						sec_layer_block = GRAVEL_B; //Gravel
-					}
+					uint8_t top_layer_block = GRASS_B; //Grass
+					uint8_t sec_layer_block = DIRT_B;  //Dirt 
+					uint8_t thr_layer_block = STONE_B; //Stone
+					uint8_t liquid_layer    = WATER_B; //Water
 					
-					if( block_noise((cx + x * CHUNK_SIZE), (cy), (cz + z * CHUNK_SIZE)) > 0){
-						if(!under_sky){
-							if(depth_below < 4){
-								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
-								p->data->water.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
-								depth_below++;
-							}
-							else{
-								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = thr_layer_block;
-								p->data->water.block_data[ATBLOCK(cx,cy,cz)] = thr_layer_block;
+					for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
+						
+						if( cy < WATER_LEVEL + 2){
+							top_layer_block = GRAVEL_B; //Gravel
+							sec_layer_block = GRAVEL_B; //Gravel
+						}
+						
+						if( block_noise((cx + x * CHUNK_SIZE), (cy), (cz + z * CHUNK_SIZE)) > 0){
+							if(!under_sky){
+								if(depth_below < 4){
+									p->data->data.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
+									p->data->water.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
+									depth_below++;
+								}
+								else{
+									p->data->data.block_data[ATBLOCK(cx,cy,cz)] = thr_layer_block;
+									p->data->water.block_data[ATBLOCK(cx,cy,cz)] = thr_layer_block;
+								}
+							}else{
+								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = top_layer_block;
+								p->data->water.block_data[ATBLOCK(cx,cy,cz)] = top_layer_block;
+								
+								under_sky = false;
 							}
 						}else{
-							p->data->data.block_data[ATBLOCK(cx,cy,cz)] = top_layer_block;
-							p->data->water.block_data[ATBLOCK(cx,cy,cz)] = top_layer_block;
-							
-							under_sky = false;
+							if(cy < WATER_LEVEL){
+								p->data->water.block_data[ATBLOCK(cx, cy, cz)] = liquid_layer;
+							}
+							depth_below = 0;
 						}
-					}else{
-						if(cy < WATER_LEVEL){
-							p->data->water.block_data[ATBLOCK(cx, cy, cz)] = liquid_layer;
-						}
-						depth_below = 0;
 					}
 				}
 			}
+		}else{
+			for(int i = 0; i < CHUNK_MEM; i++){
+				if(p->data->water.block_data[i] != WATER_B){
+					p->data->data.block_data[i] = p->data->water.block_data[i];
+				}
+			}
 		}
-		
 		chunk_data_unsync(p->data);
 	}
 	

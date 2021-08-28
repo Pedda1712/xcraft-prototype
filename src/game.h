@@ -30,9 +30,9 @@ extern struct game_state_t {
 } gst;
 
 extern void (*input_state) (float);
-extern void (*render_state)();
-extern void (*overlay_state)();
-extern void (*debug_overlay_state)(float);
+extern void (*render_state) ();
+extern void (*overlay_state) ();
+extern void (*debug_overlay_state) (float);
 
 void init_game ();
 void exit_game ();

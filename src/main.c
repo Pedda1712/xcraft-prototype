@@ -16,7 +16,7 @@
 		- Immediate Mode OpenGL for Graphics
  */
 
-uint16_t width = 1600;
+uint16_t width = 1440;
 uint16_t height = 900;
 
 int main () {
@@ -30,6 +30,8 @@ int main () {
 	
 	printf ("Loading BTD 'blockdef.btd' ...\n");
 	loadblockdef("blockdef.btd");
+	
+	set_world_name ("default");
 	
 	printf("Initializing Builder Thread ...\n");
 	if(!initialize_builder_thread()){

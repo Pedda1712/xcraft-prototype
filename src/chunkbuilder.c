@@ -12,6 +12,7 @@
 #include <math.h>
 
 #include <lightcalc.h>
+#include <worldsave.h>
 
 #define Y_AXIS 1
 #define X_AXIS 2
@@ -541,10 +542,15 @@ void terminate_builder_thread (){
 
 	for(int i = 0; i < NUM_BUILDER_THREADS;i++){pthread_join(builder_thread[i], NULL);}
 		
+	for(struct CLL_element* e = chunk_list[0].first; e != NULL; e = e->nxt){
+		dump_chunk(e->data);
+	}	
+	
 	printf("Freeing Chunk Memory ...\n");
 	for(int i = 0; i < NUMLISTS;i++){lock_list(&chunk_list[i]);}
 	CLL_freeListAndData(&chunk_list[0]);
 	for(int i = 1; i < NUMLISTS;i++){CLL_freeList(&chunk_list[i]);}
+	
 	for(int i = 0; i < NUMLISTS;i++){CLL_destroyList(&chunk_list[i]);}
 	
 	pthread_cond_destroy(&chunk_builder_lock);

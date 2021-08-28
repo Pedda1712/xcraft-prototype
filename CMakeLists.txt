@@ -21,6 +21,7 @@ set (CLIENT_SOURCES
 	${CMAKE_SOURCE_DIR}/src/physics.c
 	${CMAKE_SOURCE_DIR}/src/ui.c
 	${CMAKE_SOURCE_DIR}/src/genericlist.c
+	${CMAKE_SOURCE_DIR}/src/worldsave.c
 )
 
 add_executable(xcraft ${CLIENT_SOURCES})
