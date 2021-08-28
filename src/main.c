@@ -32,6 +32,7 @@ int main () {
 	loadblockdef("blockdef.btd");
 	
 	set_world_name ("default");
+	//delete_current_world();
 	
 	printf("Initializing Builder Thread ...\n");
 	if(!initialize_builder_thread()){
@@ -47,6 +48,8 @@ int main () {
 	
 	printf("Initializing GST ...\n");
 	init_game();
+	
+	xg_cursor_set (true, 132);
 	
 	// The GameState setup on startup
 	input_state  = &menu_input_state;

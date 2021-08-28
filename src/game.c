@@ -14,6 +14,7 @@
 #include <player.h>
 #include <genericlist.h>
 #include <worldsave.h>
+#include <pnoise.h>
 
 #include <xcraft_window_module.h>
 
@@ -33,6 +34,9 @@ void (*overlay_state) ();
 struct game_state_t gst;
 
 void empty(){}
+
+struct GLL world_selection_button_list;
+struct GLL main_menu_button_list;
 struct GLL current_button_list;
 
 void menu_action_callback (bool pressed){
@@ -75,6 +79,31 @@ void prevblock_callback (bool pressed){
 	}
 }
 
+void transition_to_selection () {
+	input_state  = &menu_input_state;
+	render_state = &world_render_state;
+	debug_overlay_state = &debug_fps_pos_state;
+	overlay_state = &menu_overlay_state;
+		
+	xg_cursor_set(true, 132);
+		
+	xg_set_button1_callback (&menu_action_callback);
+	current_button_list = world_selection_button_list;
+}
+
+void transition_to_main_menu () {
+	input_state  = &menu_input_state;
+	render_state = &world_render_state;
+	debug_overlay_state = &debug_fps_pos_state;
+	overlay_state = &menu_overlay_state;
+		
+	xg_cursor_set(true, 132);
+		
+	xg_set_button1_callback (&menu_action_callback);
+	
+	current_button_list = main_menu_button_list;
+}
+
 void transistion_to_game () {
 	xg_set_button1_callback (&break_callback);
 	xg_set_button3_callback (&place_callback);
@@ -89,10 +118,29 @@ void transistion_to_game () {
 	overlay_state = &empty;
 }
 
+void transition_regen () {
+	
+	srand(time(NULL));
+	seeded_noise_shuffle (rand());
+	delete_current_world();
+	set_world_name ("default");
+	
+	for(struct CLL_element* e = chunk_list[0].first; e != NULL; e = e->nxt){
+		e->data->initialized = false;
+	}
+	
+	struct chunkspace_position pos = {0,0};
+	// Generate the initial Chunks on the main thread
+	run_chunk_generation_atprev();
+	
+	transistion_to_game();
+}
+
 void world_input_state  (float frameTime){
 	
 	if(xg_keyboard_ascii((char)XK_Escape)) {
-		xg_window_stop ();
+		
+		transition_to_selection();
 	}
 
 	int32_t offset_x, offset_y;
@@ -338,13 +386,13 @@ void debug_fps_pos_state(float frameTime){
 
 void init_game () {
 	// To be moved into Save/Config files eventually ...
-	gst._player_x = 6.32f;
-	gst._player_y = 52.7f;
-	gst._player_z = 26.8f;
+	gst._player_x = 0.0f;
+	gst._player_y = 126.0f;
+	gst._player_z = 0.0f;
 	gst._p_chunk_x = 0;
 	gst._p_chunk_z = 0;
-	gst._angle_x = 0.31f;
-	gst._angle_y = 5.44f;
+	gst._angle_x = -0.5f;
+	gst._angle_y = 0.0f;
 	gst._dir_x = cos(gst._angle_x) * cos(gst._angle_y);
 	gst._dir_y = sin(gst._angle_x);
 	gst._dir_z = cos(gst._angle_x) * sin(gst._angle_y);
@@ -355,8 +403,6 @@ void init_game () {
 	gst._player_box._w = 0.5;
 	gst._player_box._h = 1.8;
 	gst._player_box._l = 0.5;
-	
-	xg_set_button1_callback (&menu_action_callback);
 	
 	struct chunkspace_position pos = {0,0};
 	// Generate the initial Chunks on the main thread
@@ -395,14 +441,23 @@ void init_game () {
 	
 	float ccaligned ( char* s, float sc ) {return (1.0f - (strlen(s) + 2) * sc * CHARACTER_BASE_SIZE_X * 0.5f);}
 	
-	current_button_list = GLL_init();
-	GLL_add ( &current_button_list, ui_create_button_fit ( ccaligned("XCraft", UI_TITLE_SCALE), 0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f, UI_TITLE_SCALE, BUTTON1_OFFSET, BUTTON1_OFFSET, "XCraft", &empty, &empty) );
-	GLL_add ( &current_button_list, ui_create_button_fit ( ccaligned("Play", UI_SCALE)        , 1.0f, UI_SCALE      , BUTTON6_OFFSET, BUTTON7_OFFSET, "Play"  , &empty, &transistion_to_game
-	) );
-	GLL_add ( &current_button_list, ui_create_button_fit ( ccaligned("Quit", UI_SCALE)        , 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE      , BUTTON4_OFFSET, BUTTON5_OFFSET, "Quit"  , &empty, &xg_window_stop) );
+	main_menu_button_list = GLL_init();
+	GLL_add ( &main_menu_button_list, ui_create_button_fit ( ccaligned("XCraft", UI_TITLE_SCALE), 0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f, UI_TITLE_SCALE, BUTTON1_OFFSET, BUTTON1_OFFSET, "XCraft", &empty, &empty) );
+	GLL_add ( &main_menu_button_list, ui_create_button_fit ( ccaligned("Play", UI_SCALE), 1.0f, UI_SCALE, BUTTON6_OFFSET, BUTTON7_OFFSET, "Play", &empty, &transition_to_selection));
+	GLL_add ( &main_menu_button_list, ui_create_button_fit ( ccaligned("Quit", UI_SCALE), 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE, BUTTON4_OFFSET, BUTTON5_OFFSET, "Quit", &empty, &xg_window_stop) );
+	
+	world_selection_button_list = GLL_init();
+	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("XCraft", UI_TITLE_SCALE), 0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f, UI_TITLE_SCALE, BUTTON1_OFFSET, BUTTON1_OFFSET, "XCraft", &empty, &empty) );
+	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("Continue", UI_SCALE), 1.0f, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, "Continue", &empty, &transistion_to_game));
+	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("Regenerate", UI_SCALE), 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, "Regenerate", &empty, &transition_regen) );
+	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("Back", UI_SCALE), 1.0f + 6*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, "Back", &empty, &transition_to_main_menu) );
+	
+	
+	transition_to_main_menu();
 	
 }
 
 void exit_game () {
-	GLL_free_rec (&current_button_list);
+	GLL_free_rec (&main_menu_button_list);
+	GLL_free_rec (&world_selection_button_list);
 }

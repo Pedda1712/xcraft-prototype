@@ -45,11 +45,12 @@ float block_noise (float x, float y, float z){
 }
 
 void generate_chunk_data () {
-	struct chunkspace_position prepos = chunk_gen_arg;
-	struct chunkspace_position* pos = &prepos;
 	
 	lock_list(&chunk_list[2]);
 	CLL_freeList(&chunk_list[2]);
+	
+	struct chunkspace_position prepos = chunk_gen_arg;
+	struct chunkspace_position* pos = &prepos;
 	
 	bool has_chunk_assigned [NUMBER_CHUNKS];
 	memset(has_chunk_assigned, 0, sizeof(has_chunk_assigned));
@@ -231,6 +232,10 @@ void trigger_generator_update (struct chunkspace_position* pos){
 
 void run_chunk_generation (struct chunkspace_position* pos){
 	chunk_gen_arg = *pos;
+	generate_chunk_data();
+}
+
+void run_chunk_generation_atprev (){
 	generate_chunk_data();
 }
 

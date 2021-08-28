@@ -3,10 +3,22 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <pnoise.h>
 
 #include <errno.h>
 
+#include <ftw.h>
+
 char w_path [MAX_WORLDNAME_LENGTH];
+
+void delete_current_world (){
+	int fntor (const char* fpath, const struct stat* sb, int typeflag){
+		remove (fpath);
+		return 0;
+	}
+	ftw(w_path, &fntor, 64);
+	rmdir(w_path);
+}
 
 void set_world_name (char* w_name){
 	struct stat sb;
@@ -19,6 +31,19 @@ void set_world_name (char* w_name){
 	
 	if (!(stat(w_path, &sb) == 0 && S_ISDIR(sb.st_mode))){
 		mkdir(w_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		
+		char seedf [100];
+		sprintf(seedf, "%s/seed.dat", w_path);
+		FILE* f = fopen (seedf, "wb");
+		fwrite(p, 1, 512, f);
+		fclose(f);
+		
+	}else {
+		char seedf [100];
+		sprintf(seedf, "%s/seed.dat", w_path);
+		FILE* f = fopen (seedf, "rb");
+		fread(p, 1, 512, f);
+		fclose(f);
 	}
 }
 

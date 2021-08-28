@@ -1,10 +1,14 @@
 #include <pnoise.h>
 #include <math.h>
 #include <stdint.h>
+
+#include <string.h>
+#include <stdlib.h>
+
 #define FADE(t) ( (t) * (t) * (t) * ( (t) * ( (t) * 6 - 15 ) + 10 )) 
 #define LERP(a,b,x) ( (a) + (x) * ( (b) - (a) ) )
 
-uint8_t p[] = { 180,160,137,91,90,15,                  
+uint8_t p[512] = { 180,160,137,91,90,15,                  
     131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,    
     190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
     88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
@@ -110,4 +114,20 @@ float noise (float x, float y, float z){
 	y2 = LERP (x1, x2, v);
 	
 	return LERP(y1,y2,w);
+}
+
+void seeded_noise_shuffle (int seed){
+	srand (seed);
+	
+	for (int i = 0; i < 1024; i++){
+		int a = rand () % 256;
+		int b = rand () % 256;
+		
+		uint8_t temp = p[a];
+		p[a] = p[b];
+		p[b] = temp;
+	}
+	
+	memcpy(p + 256, p, 256);
+	
 }
