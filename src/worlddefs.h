@@ -2,7 +2,7 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 12
+#define WORLD_RANGE 8
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
@@ -20,7 +20,7 @@
 #define MAX_LIGHT 12
 #define MIN_LIGHT 1
 
-#define BLOCK_TYPE_COUNT 6
+#define BLOCK_TYPE_COUNT 7
 
 #define AIR_B    0
 #define GRASS_B  1
@@ -28,6 +28,7 @@
 #define STONE_B  3
 #define GRAVEL_B 4
 #define WATER_B  5
+#define LIGHT_B  6
 
 #define ATCHUNK(x,z) ((x) + ((z) * (WORLD_RANGE*2+1)))
 #define ATBLOCK(x,y,z) ((x) + ((z) * CHUNK_SIZE) + ((y) * CHUNK_LAYER))
@@ -35,6 +36,12 @@
 struct chunkspace_position {
 	int32_t _x;
 	int32_t _z;
+};
+
+struct ipos3 {
+	int _x;
+	int _y;
+	int _z;
 };
 
 struct chunk_t {
@@ -45,6 +52,8 @@ struct chunk_t {
 #include <pthread.h>
 #include <dynamicarray.h>
 #include <stdbool.h>
+
+#include <genericlist.h>
 
 struct sync_chunk_t {
 	int32_t _x;
@@ -70,6 +79,11 @@ struct sync_chunk_t {
 	struct DFA vertex_array[MESH_LEVELS]; 
 	struct DFA texcrd_array[MESH_LEVELS];
 	struct DFA lightl_array[MESH_LEVELS];
+	
+	/*
+		List of all Light-Emitting Blocks
+	 */
+	struct GLL lightlist;
 	
 	pthread_mutex_t c_mutex;
 	bool initialized;

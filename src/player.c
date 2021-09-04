@@ -2,7 +2,9 @@
 #include <game.h>
 #include <worlddefs.h>
 #include <globallists.h>
+
 #include <math.h>
+#include <stdlib.h>
 
 void get_next_block_in_direction (float posx, float posy, float posz, float dirx, float diry, float dirz, float* sx, float* sy, float* sz, float* actx, float* acty, float* actz){
 	
@@ -81,6 +83,18 @@ bool break_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 		
 		if (in->data.block_data[ATBLOCK(ccx, ccy, ccz)] != AIR_B){
 		
+			if (in->data.block_data[ATBLOCK(ccx, ccy, ccz)] == LIGHT_B){
+				GLL_lock(&in->lightlist);
+				for(struct GLL_element* e = in->lightlist.first; e != NULL; e = e->next){
+					struct ipos3* d = e->data;
+					if(d->_x == ccx && d->_y == ccy && d->_z == ccz){
+						GLL_rem (&in->lightlist, d);
+						break;
+					}
+				}
+				GLL_unlock(&in->lightlist);
+			}
+			
 			in->data.block_data[ATBLOCK(ccx, ccy, ccz)] = AIR_B;
 			in->water.block_data[ATBLOCK(ccx, ccy, ccz)] = AIR_B;
 			
@@ -144,6 +158,13 @@ bool place_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 			if(gst._selected_block != WATER_B){
 				in->data.block_data[ATBLOCK(ccx, ccy, ccz)] = gst._selected_block;
 				in->water.block_data[ATBLOCK(ccx, ccy, ccz)] = gst._selected_block;
+				
+				if(gst._selected_block == LIGHT_B){
+					struct ipos3* npos = malloc (sizeof(struct ipos3));
+					npos->_x = ccx;npos->_y = ccy;npos->_z = ccz;
+					GLL_add(&in->lightlist, npos);
+				}
+				
 			}else{
 				in->water.block_data[ATBLOCK(ccx, ccy, ccz)] = gst._selected_block;
 			}

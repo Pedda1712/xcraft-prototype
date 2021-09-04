@@ -23,6 +23,7 @@
 #include <blocktexturedef.h>
 
 #include <globallists.h>
+#include <genericlist.h>
 
 #define NUM_BUILDER_THREADS 2
 
@@ -468,7 +469,8 @@ void do_updates_for_list (struct CLL* list){
 	for(p = list->first; p != NULL; p = p->nxt){
 		chunk_data_sync(p->data);
 
-		calculate_light(p->data, &skylight_func);
+		calculate_light(p->data, &skylight_func, true);
+		calculate_light(p->data, &blocklight_func, false);
 
 		chunk_data_unsync(p->data);
 	}
@@ -525,6 +527,7 @@ bool initialize_builder_thread (){
  			temp->_z = z;
 			temp->initialized = false;
 			CLL_add(&chunk_list[0], temp);
+			temp->lightlist = GLL_init();
 		}
 	}
 	
@@ -544,6 +547,8 @@ void terminate_builder_thread (){
 		
 	for(struct CLL_element* e = chunk_list[0].first; e != NULL; e = e->nxt){
 		dump_chunk(e->data);
+		GLL_free_rec (&e->data->lightlist);
+		GLL_destroy(&e->data->lightlist);
 	}	
 	
 	printf("Freeing Chunk Memory ...\n");

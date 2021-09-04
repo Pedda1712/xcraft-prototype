@@ -125,10 +125,8 @@ struct paragraph_t* PG_create (uint16_t width, uint16_t height){
 }
 
 void PG_free (struct paragraph_t* pg){
-	
 	free(pg->chars);
 	free(pg);
-	
 }
 
 void PG_button_fill (struct paragraph_t* pg, uint8_t b_base){

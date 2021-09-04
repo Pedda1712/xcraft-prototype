@@ -3,6 +3,7 @@
 
 struct GLL GLL_init (){
 	struct GLL crt = {0,0};
+	pthread_mutex_init(&crt.mutex, NULL);
 	return crt;
 }
 
@@ -29,16 +30,26 @@ void GLL_add (struct GLL* gll, void* _new){
 }
 
 void GLL_rem (struct GLL* gll, void* _rem) {
-	for ( struct GLL_element* e = gll->first; e != 0; e = e->next){
+
+	if(gll->first != NULL){
+		if(gll->first->data == _rem){
+			struct GLL_element* tn = gll->first;
+			gll->first = gll->first->next;
+			free (tn);
+			return;
+		}
+	}
+	
+	for ( struct GLL_element* e = gll->first; e != NULL; e = e->next){
+		if( e->next != NULL)
 		if( e->next->data == _rem){
-			
 			struct GLL_element* tn = e->next;
 			e->next = e->next->next;
 			free (tn);
-			
-			break;
+			return;
 		}
 	}
+	gll->size--;
 }
 
 void GLL_free_help (struct GLL_element* e){
@@ -50,6 +61,8 @@ void GLL_free_help (struct GLL_element* e){
 
 void GLL_free (struct GLL* gll){
 	GLL_free_help (gll->first);
+	gll->first = 0;
+	gll->size = 0;
 }
 
 void GLL_free_rec (struct GLL* gll){
@@ -57,4 +70,16 @@ void GLL_free_rec (struct GLL* gll){
 		free (e->data);
 	}
 	GLL_free(gll);
+}
+
+void GLL_destroy (struct GLL* gll){
+	pthread_mutex_destroy(&gll->mutex);
+}
+
+void GLL_lock ( struct GLL* gll ){
+	pthread_mutex_lock (&gll->mutex);
+}
+
+void GLL_unlock ( struct GLL* gll ){
+	pthread_mutex_unlock (&gll->mutex);
 }

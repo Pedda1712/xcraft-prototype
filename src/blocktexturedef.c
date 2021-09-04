@@ -10,7 +10,8 @@ struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT] = { // Default BTD values
 	{{2, 2, 2, 2, 2, 2}}, // Dirt
 	{{3, 3, 3, 3, 3, 3}}, // Stone
 	{{4, 4, 4, 4, 4, 4}}, // Gravel
-	{{5, 5, 5, 5, 5, 5}}  // Water
+	{{5, 5, 5, 5, 5, 5}}, // Water
+	{{6, 6, 6, 6, 6, 6}}  // Light
 };
 
 char blockname_map [BLOCK_TYPE_COUNT] [MAX_BLOCKNAME_LENGTH] = {
@@ -19,7 +20,8 @@ char blockname_map [BLOCK_TYPE_COUNT] [MAX_BLOCKNAME_LENGTH] = {
 	"Dirt",
 	"Stone",
 	"Gravel",
-	"Water"
+	"Water",
+	"Light Source"
 };
 
 void loadblockdef (char* filename){

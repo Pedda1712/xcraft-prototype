@@ -9,6 +9,7 @@
 #include <blocktexturedef.h>
 #include <windowglobals.h>
 #include <game.h>
+#include <genericlist.h>
 
 /*
 	Minecraft Clone in C, using:
@@ -51,12 +52,6 @@ int main () {
 	
 	xg_cursor_set (true, 132);
 	
-	// The GameState setup on startup
-	input_state  = &menu_input_state;
-	render_state = &world_render_state;
-	debug_overlay_state = &debug_fps_pos_state;
-	overlay_state = &menu_overlay_state;
-	
 	while(xg_window_isopen()){
 		float frameTime = xg_get_ftime();
 		
@@ -64,10 +59,15 @@ int main () {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		input_state (frameTime);
-		render_state();
-		debug_overlay_state(frameTime);
-		overlay_state ();
+		for (struct GLL_element* e = state_stack.first; e != NULL; e = e->next){
+			void (*f) (float) = e->data;
+			(*f)(frameTime);
+		}
+		for (struct GLL_element* e = state_update_stack.first; e != NULL; e = e->next){
+			void (*f) (void) = e->data;
+			(*f)();
+		}
+		GLL_free(&state_update_stack);
 
 		xg_glx_swap();
 

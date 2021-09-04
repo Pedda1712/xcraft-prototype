@@ -1,4 +1,5 @@
 #include <chunklist.h>
+#include <genericlist.h>
 #include <stdlib.h>
 
 struct CLL CLL_init (){
@@ -71,7 +72,7 @@ void CLL_freeListAndData (struct CLL* list){
 			DFA_free(&p->data->texcrd_array[i]);
 			DFA_free(&p->data->lightl_array[i]);
 		}
-		
+
 		pthread_mutex_destroy(&p->data->c_mutex);
 		free(p->data);
 	}

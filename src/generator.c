@@ -4,6 +4,7 @@
 #include <pnoise.h>
 #include <lightcalc.h>
 #include <worldsave.h>
+#include <genericlist.h>
 
 #include <pthread.h>
 
@@ -116,6 +117,9 @@ void generate_chunk_data () {
 		
 		memset(p->data->data.block_data, 0, CHUNK_MEM);
 		memset(p->data->water.block_data, 0, CHUNK_MEM);
+		GLL_lock(&p->data->lightlist);
+		GLL_free_rec (&p->data->lightlist);
+		GLL_unlock(&p->data->lightlist);
 		
 		int x = p->data->_x;
 		int z = p->data->_z;
@@ -165,9 +169,21 @@ void generate_chunk_data () {
 				}
 			}
 		}else{
-			for(int i = 0; i < CHUNK_MEM; i++){
-				if(p->data->water.block_data[i] != WATER_B){
-					p->data->data.block_data[i] = p->data->water.block_data[i];
+			for(int x = 0; x < CHUNK_SIZE; x++){
+				for(int z = 0; z < CHUNK_SIZE; z++){
+					for(int y = 0; y < CHUNK_SIZE_Y; y++){
+						int i = x  + z * CHUNK_SIZE + y * CHUNK_LAYER;
+						if(p->data->water.block_data[i] != WATER_B){
+							p->data->data.block_data[i] = p->data->water.block_data[i];
+						}
+						if(p->data->data.block_data[i] == LIGHT_B){
+							struct ipos3* npos = malloc (sizeof(struct ipos3));
+							npos->_x = x;npos->_y = y;npos->_z = z;
+							GLL_lock(&p->data->lightlist);
+							GLL_add(&p->data->lightlist, npos);
+							GLL_unlock(&p->data->lightlist);
+						}
+					}
 				}
 			}
 		}

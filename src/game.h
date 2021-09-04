@@ -29,10 +29,8 @@ extern struct game_state_t {
 	struct pbox_t _player_box;
 } gst;
 
-extern void (*input_state) (float);
-extern void (*render_state) ();
-extern void (*overlay_state) ();
-extern void (*debug_overlay_state) (float);
+extern struct GLL state_stack;
+extern struct GLL state_update_stack;
 
 void init_game ();
 void exit_game ();
@@ -40,11 +38,11 @@ void exit_game ();
 void empty ();
 
 void world_input_state  (float fTime);
-void world_render_state ();
+void world_render_state (float fTime);
 void debug_fps_pos_state(float fTime);
 
 void menu_input_state (float fTime);
-void menu_overlay_state ();
+void menu_overlay_state (float fTime);
 
 
 #endif
