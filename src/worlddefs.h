@@ -2,7 +2,7 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 8
+#define WORLD_RANGE 32
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
@@ -13,11 +13,11 @@
 #define BLOCK_SIZE 1.0f
 
 #define MESH_LEVELS 4
-#define WATER_LEVEL 44
+#define WATER_LEVEL 28
 
 #define WATER_SURFACE_OFFSET (1.0f/8.0f)
 
-#define MAX_LIGHT 12
+#define MAX_LIGHT 10
 #define MIN_LIGHT 1
 
 #define BLOCK_TYPE_COUNT 7
@@ -75,10 +75,12 @@ struct sync_chunk_t {
 		2 -> Water Mesh
 		3 -> Water Mesh (float buffer)
 	 */
-	bool rendermesh;
-	struct DFA vertex_array[MESH_LEVELS]; 
-	struct DFA texcrd_array[MESH_LEVELS];
-	struct DFA lightl_array[MESH_LEVELS];
+	
+	bool updatemesh;
+	bool vbo_update[2];
+	uint32_t mesh_vbo [MESH_LEVELS/2];
+	uint32_t verts [2];
+	struct DFA mesh_buffer[MESH_LEVELS];
 	
 	/*
 		List of all Light-Emitting Blocks

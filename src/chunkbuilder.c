@@ -25,6 +25,8 @@
 #include <globallists.h>
 #include <genericlist.h>
 
+#include <GL/glew.h>
+
 #define NUM_BUILDER_THREADS 2
 
 int builder_list [NUM_BUILDER_THREADS] = {
@@ -47,49 +49,51 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 	if(offset >= 2)
 		y_offset = WATER_SURFACE_OFFSET;
 
+	float vertex_coordinates [12];
+	float tex_coordinates [8];
 	
 	switch(axis){ // Emit the Vertex Positions
 		
 		case X_AXIS:{
 			if(mirorred){
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
+				vertex_coordinates[0] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + BLOCK_SIZE;
+				vertex_coordinates[3] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz;
+				vertex_coordinates[6] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[8] = wz;
+				vertex_coordinates[9] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[11] = wz + BLOCK_SIZE;
 			}else{
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE * mirorred);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz);
+				vertex_coordinates[0] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz;
+				vertex_coordinates[3] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + BLOCK_SIZE;
+				vertex_coordinates[6] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[8] = wz + BLOCK_SIZE;
+				vertex_coordinates[9] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[11] = wz;
 			}
 		break;}
 		
 		case Y_AXIS:{
 
 			if(mirorred){
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz);
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz);
+				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[2] = wz + BLOCK_SIZE;
+				vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[5] = wz + BLOCK_SIZE;
+				vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[8] = wz;
+				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[11] = wz;
 			}else{
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
+				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[2] = wz;
+				vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[5] = wz;
+				vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[8] = wz + BLOCK_SIZE;
+				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[11] = wz + BLOCK_SIZE;
 			}
 		break;}
 		
-		case Z_AXIS:{
+		default:{ // Z_AXIS
 			if(mirorred){
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
+				vertex_coordinates[0] = wx + BLOCK_SIZE;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + BLOCK_SIZE * !mirorred;
+				vertex_coordinates[3] = wx             ;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + BLOCK_SIZE * !mirorred;
+				vertex_coordinates[6] = wx             ;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[8] = wz + BLOCK_SIZE * !mirorred;
+				vertex_coordinates[9] = wx + BLOCK_SIZE;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[11] = wz + BLOCK_SIZE * !mirorred;
 			}else{
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy             );DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
-				DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
-				DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * shortened);DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE * !mirorred);
+				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + BLOCK_SIZE * !mirorred;
+				vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + BLOCK_SIZE * !mirorred;
+				vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[8] = wz + BLOCK_SIZE * !mirorred;
+				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[11] = wz + BLOCK_SIZE * !mirorred;
 			}
 		break;}
 		
@@ -99,13 +103,19 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 	uint8_t tex_index   = tex.index[(axis - 1) * 2 + mirorred];
 	uint8_t tex_index_x = tex_index % 16;
 	uint8_t tex_index_y = tex_index / 16;
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_x+1));DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_y + 1));
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_x);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_y + 1));
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_x);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_y);
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_x+1));DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_y);
-
-	// Emit the Light Level
-	for(int i = 0; i < 12; i++){DFA_add(&in[0].lightl_array[offset], lightmul);};
+	tex_coordinates[0] = TEX_SIZE * (tex_index_x+1);tex_coordinates[1] = TEX_SIZE * (tex_index_y + 1);
+	tex_coordinates[2] = TEX_SIZE * tex_index_x;tex_coordinates[3] = TEX_SIZE * (tex_index_y + 1);
+	tex_coordinates[4] = TEX_SIZE * tex_index_x;tex_coordinates[5] = TEX_SIZE * tex_index_y;
+	tex_coordinates[6] = TEX_SIZE * (tex_index_x+1);tex_coordinates[7] = TEX_SIZE * tex_index_y;
+	
+	for(int i = 0; i < 4; i++){
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[0 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[1 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[2 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], tex_coordinates[0 + i * 2]);
+		DFA_add(&in[0].mesh_buffer[offset], tex_coordinates[1 + i * 2]);
+		DFA_add(&in[0].mesh_buffer[offset], lightmul);
+	}
 }
 
 void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t block_t, uint8_t offset, uint8_t* bor, uint8_t lightlevel){
@@ -123,23 +133,33 @@ void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, fl
 	bool xmzp = (bor[6] == AIR_B);
 	bool xmzm = (bor[7] == AIR_B);
 	
+	float vertex_coordinates [12];
+	float tex_coordinates [8];
+	
 	// Emit Vertices
-	DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * ((zp || xm) || xmzp));DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
-	DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * ((zp || xp) || xpzp));DFA_add(&in->vertex_array[offset], wz + BLOCK_SIZE);
-	DFA_add(&in->vertex_array[offset], wx + BLOCK_SIZE);DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * ((zm || xp) || xpzm));DFA_add(&in->vertex_array[offset], wz);
-	DFA_add(&in->vertex_array[offset], wx             );DFA_add(&in->vertex_array[offset], wy + BLOCK_SIZE - y_offset * ((zm || xm) || xmzm));DFA_add(&in->vertex_array[offset], wz);
+	vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + BLOCK_SIZE - y_offset * ((zp || xm) || xmzp);vertex_coordinates[2] = wz + BLOCK_SIZE;
+	vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy + BLOCK_SIZE - y_offset * ((zp || xp) || xpzp);vertex_coordinates[5] = wz + BLOCK_SIZE;
+	vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * ((zm || xp) || xpzm);vertex_coordinates[8] = wz;
+	vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * ((zm || xm) || xmzm);vertex_coordinates[11] = wz;
 	
 	// Emit TexCoords
 	struct blocktexdef_t tex = btd_map[block_t];
 	uint8_t tex_index   = tex.index[(Y_AXIS - 1) * 2 + 1];
 	uint8_t tex_index_x = tex_index % 16;
 	uint8_t tex_index_y = tex_index / 16;
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_x+1));DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_y + 1));
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_x);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_y + 1));
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_x);DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_y);
-	DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * (tex_index_x+1));DFA_add(&in[0].texcrd_array[offset], TEX_SIZE * tex_index_y);
+	tex_coordinates[0] = TEX_SIZE * (tex_index_x+1);tex_coordinates[1] = TEX_SIZE * (tex_index_y + 1);
+	tex_coordinates[2] = TEX_SIZE * tex_index_x;tex_coordinates[3] = TEX_SIZE * (tex_index_y + 1);
+	tex_coordinates[4] = TEX_SIZE * tex_index_x;tex_coordinates[5] = TEX_SIZE * tex_index_y;
+	tex_coordinates[6] = TEX_SIZE * (tex_index_x+1);tex_coordinates[7] = TEX_SIZE * tex_index_y;
 	
-	for(int i = 0; i < 12; i++){DFA_add(&in[0].lightl_array[offset], lightmul);};
+	for(int i = 0; i < 4; i++){
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[0 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[1 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[2 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], tex_coordinates[0 + i * 2]);
+		DFA_add(&in[0].mesh_buffer[offset], tex_coordinates[1 + i * 2]);
+		DFA_add(&in[0].mesh_buffer[offset], lightmul);
+	}
 }
 
 void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){	
@@ -200,7 +220,7 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 		}
 	}
 	
-	emit_offset = emit_offset * 2 + !in->rendermesh;
+	emit_offset = emit_offset * 2 + !in->updatemesh;
 	
 	uint8_t border_block_type [8];
 	void load_borders (int x, int y, int z){ // This method gets the bordering blocks of the block at x,y,z (including corner pieces) 
@@ -358,9 +378,7 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 	float c_x_off = (float)chunk_x - 0.5f;
 	float c_z_off = (float)chunk_z - 0.5f;
 	
-	DFA_clear(&in->vertex_array[emit_offset]);
-	DFA_clear(&in->texcrd_array[emit_offset]);
-	DFA_clear(&in->lightl_array[emit_offset]);
+	DFA_clear(&in->mesh_buffer[emit_offset]);
 	
 	for(int x = 0; x < CHUNK_SIZE;++x){
 		for(int y = 0; y < CHUNK_SIZE_Y;++y){
@@ -467,7 +485,7 @@ void do_updates_for_list (struct CLL* list){
 	
 	struct CLL_element* p;
 	for(p = list->first; p != NULL; p = p->nxt){
-		chunk_data_sync(p->data);
+		
 
 		calculate_light(p->data, &skylight_func, true);
 		calculate_light(p->data, &blocklight_func, false);
@@ -481,7 +499,8 @@ void do_updates_for_list (struct CLL* list){
 		build_chunk_mesh(p->data, 0); // Build Block Mesh
 		build_chunk_mesh(p->data, 1); // Build Water Mesh
 		
-		p->data->rendermesh = !p->data->rendermesh;
+		p->data->updatemesh = !p->data->updatemesh;
+		p->data->vbo_update[0] = true;p->data->vbo_update[1] = true;
 		
 		chunk_data_unsync(p->data);
 	}
@@ -518,16 +537,24 @@ bool initialize_builder_thread (){
 			if(pthread_mutex_init(&temp->c_mutex, NULL) != 0){return false;}
 
 			for(int i = 0; i < MESH_LEVELS; ++i){
-				temp->vertex_array[i] = DFA_init();
-				temp->texcrd_array[i] = DFA_init();
-				temp->lightl_array[i] = DFA_init();
+				temp->mesh_buffer[i] = DFA_init();
+				glGenBuffers(1, &temp->mesh_vbo[0]);
+				glGenBuffers(1, &temp->mesh_vbo[1]);
 			}
 			
 			temp->_x = x;
  			temp->_z = z;
 			temp->initialized = false;
+			
 			CLL_add(&chunk_list[0], temp);
+			
 			temp->lightlist = GLL_init();
+			
+			temp->vbo_update[0] = false;
+			temp->vbo_update[1] = false;
+			
+			temp->verts[0] = 0;
+			temp->verts[1] = 0;
 		}
 	}
 	

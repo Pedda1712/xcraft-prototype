@@ -22,9 +22,10 @@ set (CLIENT_SOURCES
 	${CMAKE_SOURCE_DIR}/src/ui.c
 	${CMAKE_SOURCE_DIR}/src/genericlist.c
 	${CMAKE_SOURCE_DIR}/src/worldsave.c
+	${CMAKE_SOURCE_DIR}/src/shader.c
 )
 
 add_executable(xcraft ${CLIENT_SOURCES})
 target_compile_options(xcraft PUBLIC -O2 -Wall -Wextra -no-pie)
-target_link_libraries(xcraft -lxcraftwm -lX11 -lGL -lGLU -lm -lpthread)
+target_link_libraries(xcraft -lxcraftwm -lX11 -lGL -lGLU -lGLEW -lm -lpthread)
 

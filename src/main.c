@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <GL/glew.h>
+
 #include <xcraft_window_module.h>
 #include <chunkbuilder.h>
 #include <generator.h>
@@ -11,13 +13,16 @@
 #include <game.h>
 #include <genericlist.h>
 
+
+#include <shader.h>
+
 /*
 	Minecraft Clone in C, using:
 		- Xlib for Windowing
 		- Immediate Mode OpenGL for Graphics
  */
 
-uint16_t width = 1440;
+uint16_t width = 1600;
 uint16_t height = 900;
 
 int main () {
@@ -27,6 +32,9 @@ int main () {
 	xg_window(width, height, "XCraft");
 	xg_window_set_not_resizable();
 	xg_init_glx();
+	
+	glewInit();
+	
 	xg_window_show();
 	
 	printf ("Loading BTD 'blockdef.btd' ...\n");

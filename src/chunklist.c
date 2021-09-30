@@ -68,9 +68,7 @@ void CLL_freeListAndData (struct CLL* list){
 	for(p = list->first; p != NULL; p = p->nxt){
 
 		for(int i = 0; i < MESH_LEVELS; ++i){
-			DFA_free(&p->data->vertex_array[i]);
-			DFA_free(&p->data->texcrd_array[i]);
-			DFA_free(&p->data->lightl_array[i]);
+			DFA_free(&p->data->mesh_buffer[i]);
 		}
 
 		pthread_mutex_destroy(&p->data->c_mutex);

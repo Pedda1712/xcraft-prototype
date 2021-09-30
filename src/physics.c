@@ -37,6 +37,9 @@ void get_world_section_around (int x, int y, int z, uint8_t* sec, int* posx, int
 			for(int isy = y-3; isy <= y + 3; isy++){
 				if(current != NULL){
 					sec[index] = current->water.block_data[ATBLOCK(ccx, isy, ccz)];
+					
+					if(isy >= CHUNK_SIZE_Y ) sec[index] = AIR_B;
+					
 				} else {
 					sec[index] = STONE_B;
 				}

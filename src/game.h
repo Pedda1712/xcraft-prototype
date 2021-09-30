@@ -24,6 +24,7 @@ extern struct game_state_t {
 	GLuint _atlas_texture;
 	GLuint _text_font;
 	GLuint _gfx_font;
+	GLuint _shader_prg;
 	float _skycolor[4];
 	int32_t _selected_block;
 	struct pbox_t _player_box;

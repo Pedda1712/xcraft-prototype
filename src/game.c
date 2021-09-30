@@ -1,3 +1,5 @@
+#include <GL/glew.h>
+
 #include <game.h>
 #include <worlddefs.h>
 #include <chunklist.h>
@@ -15,6 +17,7 @@
 #include <genericlist.h>
 #include <worldsave.h>
 #include <pnoise.h>
+#include <shader.h>
 
 #include <xcraft_window_module.h>
 
@@ -140,9 +143,20 @@ void tt_regen () {
 	for(struct CLL_element* e = chunk_list[0].first; e != NULL; e = e->nxt){
 		e->data->initialized = false;
 	}
+	
+	gst._player_x = 0.0f;
+	gst._player_y = 126.0f;
+	gst._player_z = 0.0f;
+	gst._p_chunk_x = 0;
+	gst._p_chunk_z = 0;
+	gst._angle_x = -0.5f;
+	gst._angle_y = 0.0f;
 
 	// Generate the initial Chunks on the main thread
-	run_chunk_generation_atprev();
+	//run_chunk_generation_atprev();
+	struct chunkspace_position pos = {0,0};
+	// Generate the initial Chunks on the main thread
+	run_chunk_generation(&pos);
 	
 	transistion_to_game();
 }
@@ -299,6 +313,16 @@ void world_input_state  (float frameTime){
 void world_render_state (float fTime){
 	//Check if Player crossed a chunk border
 	
+	int update_chunk_vbo (struct sync_chunk_t* c, bool water){
+
+		glBindBuffer(GL_ARRAY_BUFFER, c->mesh_vbo[water]);
+		glBufferData(GL_ARRAY_BUFFER, c->mesh_buffer[water * 2 + c->updatemesh].size * sizeof(float), c->mesh_buffer[water * 2 + c->updatemesh].data, GL_STATIC_DRAW);
+		
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		
+		return c->mesh_buffer[water * 2 + c->updatemesh].size/6;
+	}
+	
 	float _add_x = (gst._player_x > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
 	float _add_z = (gst._player_z > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
 	
@@ -324,33 +348,67 @@ void world_render_state (float fTime){
 	
 	glBindTexture(GL_TEXTURE_2D, gst._atlas_texture);
 	
-	glEnable(GL_FOG);
 	glEnable  (GL_DEPTH_TEST);
 	glEnable  (GL_CULL_FACE);
 	
+	glUseProgram(gst._shader_prg);
 	struct CLL_element* p;
 	for(p = chunk_list[0].first; p!= NULL; p = p->nxt){
 		struct sync_chunk_t* ch = p->data;
 		
+		if(ch->vbo_update[0]){
+			chunk_data_sync(ch);
+			ch->verts[0] = update_chunk_vbo(ch, false);
+			ch->vbo_update[0] = false;
+			chunk_data_unsync(ch);
+		}
+		
+		
 		// Render Chunk
-		glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[ch->rendermesh].data);
-		glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[ch->rendermesh].data);
-		glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[ch->rendermesh].data);
-		glDrawArrays(GL_QUADS, 0, ch->vertex_array[ch->rendermesh].size/3 );
+		glBindBuffer(GL_ARRAY_BUFFER, ch->mesh_vbo[0]);
+		
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+		glVertexAttribPointer(2, 1, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)(5* sizeof(float)));
+		
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		
+		glDrawArrays(GL_QUADS, 0, ch->verts[0]);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		
 	}
+	
+	glEnable(GL_BLEND);
 	for(p = chunk_list[0].first; p!= NULL; p = p->nxt){
 		struct sync_chunk_t* ch = p->data;
 		// Render Water
-			
-		glEnable(GL_BLEND);
+
+		if(ch->vbo_update[1]){
+			chunk_data_sync(ch);
+			ch->verts[1] = update_chunk_vbo(ch, true);
+			ch->vbo_update[1] = false;
+			chunk_data_unsync(ch);
+		}
 		
-		glVertexPointer(3, GL_FLOAT, 0, ch->vertex_array[2 + ch->rendermesh].data);
-		glTexCoordPointer (2, GL_FLOAT, 0, ch->texcrd_array[2 + ch->rendermesh].data);
-		glColorPointer (3, GL_FLOAT, 0, ch->lightl_array[2 + ch->rendermesh].data);
-		glDrawArrays(GL_QUADS, 0, ch->vertex_array[2 + ch->rendermesh].size/3 );
+		// Render Chunk
+		glBindBuffer(GL_ARRAY_BUFFER, ch->mesh_vbo[1]);
 		
-		glDisable(GL_BLEND);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+		glVertexAttribPointer(2, 1, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)(5* sizeof(float)));
+		
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		
+		glDrawArrays(GL_QUADS, 0, ch->verts[1]);
+		
 	}
+	glDisable(GL_BLEND);
+	
+	glUseProgram(0);
 }
 
 void menu_input_state (float fTime){
@@ -385,15 +443,15 @@ void menu_overlay_state (float fTime){
 void debug_fps_pos_state(float frameTime){
 	setupfont();
 	
-	//char fps_txt [50];
+	char fps_txt [50];
 	setfont(gst._gfx_font);
-	drawstring("XCraft build-04/09/21", 0.0f, 0.0f, 0.44f);
-	/*sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
+	drawstring("XCraft build-30/09/21", 0.0f, 0.0f, 0.44f);
+	sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
  	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 2, 0.44f);
 	sprintf(fps_txt, "YAW:%f, PITCH:%f", gst._angle_y, gst._angle_x);
-	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 3, 0.44f);*/
+	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 3, 0.44f);
 	drawstring(blockname_map[gst._selected_block], 0.0f, 2.0f - CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
 	
 	revertfont();
@@ -415,6 +473,13 @@ void init_game () {
 	gst._player_range = 10;
 	gst._selected_block = 1;
 	
+	gst._shader_prg = load_shader("shader/clientside.v", "shader/clientside.f");
+	glUseProgram(gst._shader_prg);
+	glBindAttribLocation(gst._shader_prg, 0, "apos");
+	glBindAttribLocation(gst._shader_prg, 1, "atex");
+	glBindAttribLocation(gst._shader_prg, 2, "acol");
+	glLinkProgram(gst._shader_prg);
+	
 	gst._player_box._w = 0.5;
 	gst._player_box._h = 1.8;
 	gst._player_box._l = 0.5;
@@ -422,10 +487,6 @@ void init_game () {
 	struct chunkspace_position pos = {0,0};
 	// Generate the initial Chunks on the main thread
 	run_chunk_generation(&pos);
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
 
 	gst._skycolor[0] = 0.0f;
 	gst._skycolor[1] = 0.5f;
@@ -435,12 +496,6 @@ void init_game () {
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-	
-	glEnable(GL_FOG); // Configure Fog
-	glFogfv(GL_FOG_COLOR, gst._skycolor);
-	glFogi (GL_FOG_MODE , GL_LINEAR);
-	glFogf (GL_FOG_END  , (WORLD_RANGE/1.2f) * CHUNK_SIZE);
-	glFogf (GL_FOG_START, (WORLD_RANGE/1.7f) * CHUNK_SIZE);
 	
 	glBlendFunc(GL_ONE_MINUS_CONSTANT_COLOR, GL_CONSTANT_COLOR); // Configure Blending
 	glBlendColor(0.33f,0.33f,0.0f,1.0f);

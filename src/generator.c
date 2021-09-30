@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 
 #include <stdio.h>
 
@@ -34,7 +35,7 @@ struct chunkspace_position chunk_gen_arg;
 #define HFUNC(y, m ,l) ((m) * (y) - (m) * (l))
 // y -> height, m -> slope, l -> "sea level"
 
-float block_noise (float x, float y, float z){ 
+float block_noise (float x, float y, float z, float slope, float median_height){ 
 	float first_oct  = noise((x) * 0.02f, (y) * 0.0125f, (z) * 0.02f);
 	float second_oct = noise((x) * 0.04f, (y) * 0.05f, (z) * 0.04f);
 	float third_oct  = noise((x) * 0.08f, (y) * 0.1f, (z) * 0.08f);
@@ -42,7 +43,7 @@ float block_noise (float x, float y, float z){
 	
 	float blend = first_oct * 0.75f + second_oct * 0.125f + third_oct * 0.0625f + fourth_oct * 0.03125f;
 	
-	return blend - HFUNC(y, 0.014f, 64);
+	return blend - HFUNC(y, slope, median_height);
 }
 
 void generate_chunk_data () {
@@ -71,8 +72,8 @@ void generate_chunk_data () {
 			has_chunk_assigned[ATCHUNK(x_local, z_local)] = true;
 			
 			if(!e->data->initialized){
-				CLL_add(&chunk_list[2], e->data);
-				e->data->initialized = true;
+				CLL_add(&or_chunks, e->data);
+				has_chunk_assigned[ATCHUNK(x_local, z_local)] = false;
 			}
 			
 		}
@@ -81,7 +82,11 @@ void generate_chunk_data () {
 	}
 	
 	for (struct CLL_element* e = or_chunks.first; e != NULL; e = e->nxt){
-		dump_chunk(e->data);
+		if(e->data->initialized){
+			dump_chunk(e->data);
+		}else{
+			e->data->initialized = true;
+		}
 	}
 	
 	// Reassign out of range chunks to positions that dont have one yet and add them to the generation queue (chunk_list[2])
@@ -97,6 +102,7 @@ void generate_chunk_data () {
 					int32_t z_global = cz + pos->_z - WORLD_RANGE;
 					j->data->_x = x_global;
 					j->data->_z = z_global;
+
 					CLL_add(&chunk_list[2], j->data);
 					
 					struct CLL_element* temp = j;
@@ -110,7 +116,7 @@ void generate_chunk_data () {
 	
 	CLL_freeList(&or_chunks);
 	CLL_destroyList(&or_chunks);
-	
+
 	struct CLL_element* p;
 	for(p = chunk_list[2].first; p != NULL; p = p->nxt){
 		chunk_data_sync(p->data);
@@ -135,16 +141,29 @@ void generate_chunk_data () {
 					uint8_t thr_layer_block = STONE_B; //Stone
 					uint8_t liquid_layer    = WATER_B; //Water
 					
+					float slope_modifier = (noise((cx + x * CHUNK_SIZE) * 0.005f, 0, (cz + z * CHUNK_SIZE) * 0.005f) + 1.002f);
+					slope_modifier = pow(slope_modifier, 8);
+					
+					float median_f = pow(2, -(slope_modifier-6.01f)) + 32;
+					
+					slope_modifier = slope_modifier * 0.014f;
+					if(slope_modifier < 0.014f) slope_modifier = 0.014f;
+					
+					float lake_modif = (noise((cx + x * CHUNK_SIZE) * 0.02f, 0, (cz + z * CHUNK_SIZE) * 0.02f));
+					if(lake_modif < 0.0f){
+						median_f += 16 * lake_modif;
+					}
+					
 					for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
 						
-						if( cy < WATER_LEVEL + 2){
+						if( cy < WATER_LEVEL + 1){
 							top_layer_block = GRAVEL_B; //Gravel
 							sec_layer_block = GRAVEL_B; //Gravel
 						}
 						
-						if( block_noise((cx + x * CHUNK_SIZE), (cy), (cz + z * CHUNK_SIZE)) > 0){
+						if( block_noise((cx + x * CHUNK_SIZE), (cy), (cz + z * CHUNK_SIZE), slope_modifier, median_f) > 0){
 							if(!under_sky){
-								if(depth_below < 4){
+								if(depth_below < 3){
 									p->data->data.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
 									p->data->water.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
 									depth_below++;
@@ -189,7 +208,7 @@ void generate_chunk_data () {
 		}
 		chunk_data_unsync(p->data);
 	}
-	
+
 	// When Generation is done, rebuild Meshes for all Chunks who neighbour the new ones
 	lock_list(&chunk_list[1]);
 	for(p = chunk_list[2].first; p != NULL; p = p->nxt){
