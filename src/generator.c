@@ -123,6 +123,7 @@ void generate_chunk_data () {
 		
 		memset(p->data->data.block_data, 0, CHUNK_MEM);
 		memset(p->data->water.block_data, 0, CHUNK_MEM);
+		memset(p->data->plant.block_data, 0, CHUNK_MEM);
 		GLL_lock(&p->data->lightlist);
 		GLL_free_rec (&p->data->lightlist);
 		GLL_unlock(&p->data->lightlist);
@@ -136,25 +137,43 @@ void generate_chunk_data () {
 					bool under_sky = true;
 					int depth_below = 0;
 					
-					uint8_t top_layer_block = GRASS_B; //Grass
-					uint8_t sec_layer_block = DIRT_B;  //Dirt 
+					uint8_t top_layer_block = SNOW_B; //Grass
+					uint8_t sec_layer_block = SNOW_B;  //Dirt 
 					uint8_t thr_layer_block = STONE_B; //Stone
 					uint8_t liquid_layer    = WATER_B; //Water
 					
-					float slope_modifier = (noise((cx + x * CHUNK_SIZE) * 0.005f, 0, (cz + z * CHUNK_SIZE) * 0.005f) + 1.002f);
+					float ocean_modif = (noise((cx + x * CHUNK_SIZE) * 0.0025f, 0, (cz + z * CHUNK_SIZE) * 0.0025f));
+					
+					float ocean_slope = (ocean_modif < 0.0f) ? 0.0f : ocean_modif;
+					float slope_modifier = (noise((cx + x * CHUNK_SIZE) * 0.005f, 0, (cz + z * CHUNK_SIZE) * 0.005f) + 1.002f) + 2 * ocean_slope;
 					slope_modifier = pow(slope_modifier, 8);
 					
 					float median_f = pow(2, -(slope_modifier-6.01f)) + 32;
+					median_f -= 24 * ocean_slope;
 					
 					slope_modifier = slope_modifier * 0.014f;
 					if(slope_modifier < 0.014f) slope_modifier = 0.014f;
 					
 					float lake_modif = (noise((cx + x * CHUNK_SIZE) * 0.02f, 0, (cz + z * CHUNK_SIZE) * 0.02f));
 					if(lake_modif < 0.0f){
-						median_f += 16 * lake_modif;
+						median_f += 6 * lake_modif;
 					}
+					float grass_modif = (noise((cx + x * CHUNK_SIZE) * 0.05f, 0, (cz + z * CHUNK_SIZE) * 0.05f));
+					float ngrass_modif = (noise((cx + x * CHUNK_SIZE) * 0.35f, 0, (cz + z * CHUNK_SIZE) * 0.35f));
+					
+					float flow_modif = (noise((cx + x * CHUNK_SIZE) * 0.02f, 16.0f, (cz + z * CHUNK_SIZE) * 0.02f));
+					float nflow_modif = (noise((cx + x * CHUNK_SIZE) * 0.03f, 32.0f, (cz + z * CHUNK_SIZE) * 0.03f)) * 0.5f + (noise((cx + x * CHUNK_SIZE) * 0.9f, 32.0f, (cz + z * CHUNK_SIZE) * 0.9f)) * 0.5f;
 					
 					for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
+						
+						if( cy < SNOW_LEVEL + lake_modif * 16){
+							top_layer_block = SGRASS_B;
+							sec_layer_block = DIRT_B;
+						}
+						if( cy < SGRASS_LEVEL + lake_modif * 16){
+							top_layer_block = GRASS_B;
+							sec_layer_block = DIRT_B;
+						}
 						
 						if( cy < WATER_LEVEL + 1){
 							top_layer_block = GRAVEL_B; //Gravel
@@ -176,6 +195,20 @@ void generate_chunk_data () {
 								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = top_layer_block;
 								p->data->water.block_data[ATBLOCK(cx,cy,cz)] = top_layer_block;
 								
+								if((top_layer_block == GRASS_B || top_layer_block == SGRASS_B) && cy < CHUNK_SIZE_Y - 1 && ngrass_modif > 0.0f){
+									
+									uint8_t grass_type = (grass_modif > 0.0f) ? XGRASS_B : XGRAST_B;
+									
+									if(nflow_modif > 0.28f){
+										grass_type += (flow_modif > -0.75f) ? 2 : 0;
+										grass_type += (flow_modif > -0.25f) ? 2 : 0;
+										grass_type += (flow_modif > 0.25f && flow_modif < 0.75f) ? 2 : 0;
+									}
+									
+									p->data->water.block_data[ATBLOCK(cx, cy + 1, cz)] = grass_type;
+									p->data->plant.block_data[ATBLOCK(cx, cy + 1, cz)] = grass_type;
+								}
+								
 								under_sky = false;
 							}
 						}else{
@@ -192,8 +225,11 @@ void generate_chunk_data () {
 				for(int z = 0; z < CHUNK_SIZE; z++){
 					for(int y = 0; y < CHUNK_SIZE_Y; y++){
 						int i = x  + z * CHUNK_SIZE + y * CHUNK_LAYER;
-						if(p->data->water.block_data[i] != WATER_B){
+						if(p->data->water.block_data[i] != WATER_B && (p->data->water.block_data[i] < XGRASS_B || p->data->water.block_data[i] > XFLOW6_B)){
 							p->data->data.block_data[i] = p->data->water.block_data[i];
+						}
+						if(p->data->water.block_data[i] >= XGRASS_B && p->data->water.block_data[i] <= XFLOW6_B){
+							p->data->plant.block_data[i] = p->data->water.block_data[i];
 						}
 						if(p->data->data.block_data[i] == LIGHT_B){
 							struct ipos3* npos = malloc (sizeof(struct ipos3));
@@ -243,7 +279,9 @@ void* chunk_gen_thread (){
 	while(is_chunkgen_running){
 		pthread_cond_wait(&chunk_gen_lock, &chunk_gen_mutex);
 		
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 		generate_chunk_data();
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 	}
 	pthread_mutex_unlock(&chunk_gen_mutex);
 	return 0;

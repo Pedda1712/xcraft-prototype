@@ -11,7 +11,17 @@ struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT] = { // Default BTD values
 	{{3, 3, 3, 3, 3, 3}}, // Stone
 	{{4, 4, 4, 4, 4, 4}}, // Gravel
 	{{5, 5, 5, 5, 5, 5}}, // Water
-	{{6, 6, 6, 6, 6, 6}}  // Light
+	{{6, 6, 6, 6, 6, 6}}, // Light
+	{{2, 7, 8, 8, 8, 8}}, // Snowy Grass
+	{{7, 7, 7, 7, 7, 7}}, // Snow
+	{{240, 240, 240, 240, 240, 240}}, // Grass Blades
+	{{241, 241, 241, 241, 241, 241}}, // Tall Grass Blades
+	{{242, 242, 242, 242, 242, 242}}, // Grass Blades with Flowers
+	{{243, 243, 243, 243, 243, 243}}, // Grass Blades with Flowers
+	{{244, 244, 244, 244, 244, 244}}, // Grass Blades with Flowers
+	{{245, 245, 245, 245, 245, 245}}, // Grass Blades with Flowers
+	{{246, 246, 246, 246, 246, 246}}, // Grass Blades with Flowers
+	{{247, 247, 247, 247, 247, 247}}, // Grass Blades with Flowers
 };
 
 char blockname_map [BLOCK_TYPE_COUNT] [MAX_BLOCKNAME_LENGTH] = {
@@ -21,7 +31,17 @@ char blockname_map [BLOCK_TYPE_COUNT] [MAX_BLOCKNAME_LENGTH] = {
 	"Stone",
 	"Gravel",
 	"Water",
-	"Light Source"
+	"Light Source",
+	"Snowy Grass",
+	"Snow",
+	"Grass Blades",
+	"Tall Grass Blades",
+	"Flower Blades",
+	"Tall Flower Blades",
+	"Flower Blades",
+	"Tall Flower Blades",
+	"Flower Blades",
+	"Tall Flower Blades"
 };
 
 void loadblockdef (char* filename){

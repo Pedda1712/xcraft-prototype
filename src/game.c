@@ -12,7 +12,6 @@
 #include <ui.h>
 #include <globallists.h>
 #include <bmp24.h>
-#include <math.h>
 #include <player.h>
 #include <genericlist.h>
 #include <worldsave.h>
@@ -24,6 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 // To be moved into a config file at some point
 #define P_SPEED 10.0f
@@ -313,14 +313,14 @@ void world_input_state  (float frameTime){
 void world_render_state (float fTime){
 	//Check if Player crossed a chunk border
 	
-	int update_chunk_vbo (struct sync_chunk_t* c, bool water){
+	int update_chunk_vbo (struct sync_chunk_t* c, uint8_t level){
 
-		glBindBuffer(GL_ARRAY_BUFFER, c->mesh_vbo[water]);
-		glBufferData(GL_ARRAY_BUFFER, c->mesh_buffer[water * 2 + c->updatemesh].size * sizeof(float), c->mesh_buffer[water * 2 + c->updatemesh].data, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, c->mesh_vbo[level]);
+		glBufferData(GL_ARRAY_BUFFER, c->mesh_buffer[level * 2 + c->updatemesh].size * sizeof(float), c->mesh_buffer[level * 2 + c->updatemesh].data, GL_STATIC_DRAW);
 		
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		
-		return c->mesh_buffer[water * 2 + c->updatemesh].size/6;
+		return c->mesh_buffer[level * 2 + c->updatemesh].size/6;
 	}
 	
 	float _add_x = (gst._player_x > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
@@ -387,7 +387,7 @@ void world_render_state (float fTime){
 
 		if(ch->vbo_update[1]){
 			chunk_data_sync(ch);
-			ch->verts[1] = update_chunk_vbo(ch, true);
+			ch->verts[1] = update_chunk_vbo(ch, 1);
 			ch->vbo_update[1] = false;
 			chunk_data_unsync(ch);
 		}
@@ -407,6 +407,34 @@ void world_render_state (float fTime){
 		
 	}
 	glDisable(GL_BLEND);
+	
+	glDisable(GL_CULL_FACE);
+	for(p = chunk_list[0].first; p!= NULL; p = p->nxt){
+		struct sync_chunk_t* ch = p->data;
+		// Render Water
+
+		if(ch->vbo_update[2]){
+			chunk_data_sync(ch);
+			ch->verts[2] = update_chunk_vbo(ch, 2);
+			ch->vbo_update[2] = false;
+			chunk_data_unsync(ch);
+		}
+		
+		// Render Chunk
+		glBindBuffer(GL_ARRAY_BUFFER, ch->mesh_vbo[2]);
+		
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+		glVertexAttribPointer(2, 1, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)(5* sizeof(float)));
+		
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		
+		glDrawArrays(GL_QUADS, 0, ch->verts[2]);
+		
+	}
+	glEnable(GL_CULL_FACE);
 	
 	glUseProgram(0);
 }
@@ -445,7 +473,7 @@ void debug_fps_pos_state(float frameTime){
 	
 	char fps_txt [50];
 	setfont(gst._gfx_font);
-	drawstring("XCraft build-30/09/21", 0.0f, 0.0f, 0.44f);
+	drawstring("XCraft build-02/10/21", 0.0f, 0.0f, 0.44f);
 	sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
  	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);
@@ -532,6 +560,8 @@ void init_game () {
 void exit_game () {
 	GLL_free_rec (&main_menu_button_list);
 	GLL_free_rec (&world_selection_button_list);
-	GLL_free (&state_stack); GLL_destroy(&state_stack);
-	GLL_free (&state_update_stack); GLL_destroy (&state_update_stack);
+	GLL_free (&state_stack); 
+	GLL_destroy(&state_stack);
+	GLL_free (&state_update_stack); 
+	GLL_destroy (&state_update_stack);
 }

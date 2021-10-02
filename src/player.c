@@ -81,9 +81,9 @@ bool break_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 
 	if( in != NULL ){
 		
-		if (in->data.block_data[ATBLOCK(ccx, ccy, ccz)] != AIR_B){
+		if (in->water.block_data[ATBLOCK(ccx, ccy, ccz)] != AIR_B){
 		
-			if (in->data.block_data[ATBLOCK(ccx, ccy, ccz)] == LIGHT_B){
+			if (in->water.block_data[ATBLOCK(ccx, ccy, ccz)] == LIGHT_B){
 				GLL_lock(&in->lightlist);
 				for(struct GLL_element* e = in->lightlist.first; e != NULL; e = e->next){
 					struct ipos3* d = e->data;
@@ -97,6 +97,7 @@ bool break_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 			
 			in->data.block_data[ATBLOCK(ccx, ccy, ccz)] = AIR_B;
 			in->water.block_data[ATBLOCK(ccx, ccy, ccz)] = AIR_B;
+			in->plant.block_data[ATBLOCK(ccx, ccy, ccz)] = AIR_B;
 			
 			lock_list(&chunk_list[3]);
 			int chunk_distance = (int)(MAX_LIGHT / CHUNK_SIZE) + 1;

@@ -41,8 +41,7 @@ bool is_running;
 void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel){
 
 	float lightmul = (Y_AXIS == axis) ? ( mirorred ? 1.0f : 0.45f) : 0.8f; // Light Level depending on block side
-	float diroffset =  (Z_AXIS == axis) ? 0.7f : 1.0f;
-	lightmul *= diroffset;
+	lightmul *= (Z_AXIS == axis) ? 0.7f : 1.0f;
 	lightmul *= ((float)lightlevel / (float)MAX_LIGHT);
 	
 	float y_offset = 0.0f;
@@ -162,65 +161,10 @@ void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, fl
 	}
 }
 
-void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){	
+void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
 	
 	int chunk_x = in->_x;
 	int chunk_z = in->_z;
-
-	/*
-	0->the chunk in +X direction (or NULL)
-	1->the chunk in -X direction (or NULL)
-	2->the chunk in +Z direction (or NULL)
-	3->the chunk in -Z direction (or NULL)
-	4->the chunk in +X+Z direction (or NULL)
-	5->the chunk in +X-Z direction (or NULL)
-	6->the chunk in -X+Z direction (or NULL)
-	7->the chunk in -X-Z direction (or NULL)
-	*/
-	
-	struct sync_chunk_t* neighbours [8];
-	neighbours[0] = CLL_getDataAt(&chunk_list[0], chunk_x + 1, chunk_z);
-	neighbours[1] = CLL_getDataAt(&chunk_list[0], chunk_x - 1, chunk_z);
-	neighbours[2] = CLL_getDataAt(&chunk_list[0], chunk_x, chunk_z + 1);
-	neighbours[3] = CLL_getDataAt(&chunk_list[0], chunk_x, chunk_z - 1);
-	neighbours[4] = CLL_getDataAt(&chunk_list[0], chunk_x + 1, chunk_z + 1);
-	neighbours[5] = CLL_getDataAt(&chunk_list[0], chunk_x + 1, chunk_z - 1);
-	neighbours[6] = CLL_getDataAt(&chunk_list[0], chunk_x - 1, chunk_z + 1);
-	neighbours[7] = CLL_getDataAt(&chunk_list[0], chunk_x - 1, chunk_z - 1);
-	
-	struct chunk_t* data; // Block Data from which the Mesh is built (varies depending on target (blocks or warer))
-	struct chunk_t* neighbour_data [8]; // also varies depending on target
-	uint8_t emit_offset; // Which mesh to write into (the target mesh)
-	
-	switch (m_level){
-		case 1: {
-			data = &in->water;
-			emit_offset = 1;
-			for(int i = 0; i < 8; ++i){
-				if(neighbours[i] != NULL){
-					neighbour_data[i] = &neighbours[i]->water;
-				}else{
-					neighbour_data[i] = NULL;
-				}
-			}
-			break;
-		}
-		
-		default: {
-			data = &in->data;
-			emit_offset = 0;
-			for(int i = 0; i < 8; ++i){
-				if(neighbours[i] != NULL){
-					neighbour_data[i] = &neighbours[i]->data;
-				} else{
-					neighbour_data[i] = NULL;
-				}
-			}
-			break;
-		}
-	}
-	
-	emit_offset = emit_offset * 2 + !in->updatemesh;
 	
 	uint8_t border_block_type [8];
 	void load_borders (int x, int y, int z){ // This method gets the bordering blocks of the block at x,y,z (including corner pieces) 
@@ -378,8 +322,6 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 	float c_x_off = (float)chunk_x - 0.5f;
 	float c_z_off = (float)chunk_z - 0.5f;
 	
-	DFA_clear(&in->mesh_buffer[emit_offset]);
-	
 	for(int x = 0; x < CHUNK_SIZE;++x){
 		for(int y = 0; y < CHUNK_SIZE_Y;++y){
 			for(int z = 0; z < CHUNK_SIZE;++z){
@@ -480,6 +422,153 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level){
 	}
 }
 
+void emit_x (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel){
+	
+	float lightmul = (float)lightlevel / (float)MAX_LIGHT;
+	
+	float vertex_coordinates[24];
+	float tex_coordinates[16];
+	
+	vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy              ;vertex_coordinates[2] = wz;
+	vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy              ;vertex_coordinates[5] = wz + BLOCK_SIZE;
+	vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE;vertex_coordinates[8] = wz + BLOCK_SIZE;
+	vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE ;vertex_coordinates[11] = wz;
+	
+	vertex_coordinates[12] = wx             ;vertex_coordinates[13] = wy             ;vertex_coordinates[14] = wz + BLOCK_SIZE;
+	vertex_coordinates[15] = wx + BLOCK_SIZE;vertex_coordinates[16] = wy             ;vertex_coordinates[17] = wz;
+	vertex_coordinates[18] = wx + BLOCK_SIZE;vertex_coordinates[19] = wy + BLOCK_SIZE;vertex_coordinates[20] = wz;
+	vertex_coordinates[21] = wx             ;vertex_coordinates[22] = wy + BLOCK_SIZE;vertex_coordinates[23] = wz + BLOCK_SIZE;
+	
+	struct blocktexdef_t tex = btd_map[block_t];
+	uint8_t tex_index   = tex.index[0];
+	uint8_t tex_index_x = tex_index % 16;
+	uint8_t tex_index_y = tex_index / 16;
+	tex_coordinates[0] = TEX_SIZE * (tex_index_x+1);tex_coordinates[1] = TEX_SIZE * (tex_index_y + 1);
+	tex_coordinates[2] = TEX_SIZE * tex_index_x;tex_coordinates[3] = TEX_SIZE * (tex_index_y + 1);
+	tex_coordinates[4] = TEX_SIZE * tex_index_x;tex_coordinates[5] = TEX_SIZE * tex_index_y;
+	tex_coordinates[6] = TEX_SIZE * (tex_index_x+1);tex_coordinates[7] = TEX_SIZE * tex_index_y;
+	tex_coordinates[8] = TEX_SIZE * (tex_index_x+1);tex_coordinates[9] = TEX_SIZE * (tex_index_y + 1);
+	tex_coordinates[10] = TEX_SIZE * tex_index_x;tex_coordinates[11] = TEX_SIZE * (tex_index_y + 1);
+	tex_coordinates[12] = TEX_SIZE * tex_index_x;tex_coordinates[13] = TEX_SIZE * tex_index_y;
+	tex_coordinates[14] = TEX_SIZE * (tex_index_x+1);tex_coordinates[15] = TEX_SIZE * tex_index_y;
+	
+	for(int i = 0; i < 8; i++){
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[0 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[1 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[2 + i * 3]);
+		DFA_add(&in[0].mesh_buffer[offset], tex_coordinates[0 + i * 2]);
+		DFA_add(&in[0].mesh_buffer[offset], tex_coordinates[1 + i * 2]);
+		DFA_add(&in[0].mesh_buffer[offset], lightmul);
+	}
+} 
+
+void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
+	
+	int chunk_x = in->_x;
+	int chunk_z = in->_z;
+	
+	float c_x_off = (float)chunk_x - 0.5f;
+	float c_z_off = (float)chunk_z - 0.5f;
+	
+	for(int x = 0; x < CHUNK_SIZE;++x){
+		for(int y = 0; y < CHUNK_SIZE_Y;++y){
+			for(int z = 0; z < CHUNK_SIZE;++z){
+				
+				float wx,wy,wz; // The World-Space Position
+				wx = (x + c_x_off * CHUNK_SIZE) * BLOCK_SIZE;
+				wz = (z + c_z_off * CHUNK_SIZE) * BLOCK_SIZE;
+				wy = y * BLOCK_SIZE;
+				
+				uint8_t block_t = data->block_data[ATBLOCK(x,y,z)]; // The Block Type at the current position
+				
+				if(block_t >= XGRASS_B && block_t <= XFLOW6_B){
+					emit_x(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, false, in->light.block_data[ATBLOCK(x,y,z)]);
+				}
+			}
+		}
+	}
+}
+
+void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level, void (*routine) (struct sync_chunk_t*, struct chunk_t*, struct sync_chunk_t**,struct chunk_t** ,uint32_t, uint32_t)){	
+	
+	int chunk_x = in->_x;
+	int chunk_z = in->_z;
+
+	/*
+	0->the chunk in +X direction (or NULL)
+	1->the chunk in -X direction (or NULL)
+	2->the chunk in +Z direction (or NULL)
+	3->the chunk in -Z direction (or NULL)
+	4->the chunk in +X+Z direction (or NULL)
+	5->the chunk in +X-Z direction (or NULL)
+	6->the chunk in -X+Z direction (or NULL)
+	7->the chunk in -X-Z direction (or NULL)
+	*/
+	
+	struct sync_chunk_t* neighbours [8];
+	neighbours[0] = CLL_getDataAt(&chunk_list[0], chunk_x + 1, chunk_z);
+	neighbours[1] = CLL_getDataAt(&chunk_list[0], chunk_x - 1, chunk_z);
+	neighbours[2] = CLL_getDataAt(&chunk_list[0], chunk_x, chunk_z + 1);
+	neighbours[3] = CLL_getDataAt(&chunk_list[0], chunk_x, chunk_z - 1);
+	neighbours[4] = CLL_getDataAt(&chunk_list[0], chunk_x + 1, chunk_z + 1);
+	neighbours[5] = CLL_getDataAt(&chunk_list[0], chunk_x + 1, chunk_z - 1);
+	neighbours[6] = CLL_getDataAt(&chunk_list[0], chunk_x - 1, chunk_z + 1);
+	neighbours[7] = CLL_getDataAt(&chunk_list[0], chunk_x - 1, chunk_z - 1);
+	
+	struct chunk_t* data; // Block Data from which the Mesh is built (varies depending on target (blocks or warer))
+	struct chunk_t* neighbour_data [8]; // also varies depending on target
+	uint8_t emit_offset; // Which mesh to write into (the target mesh)
+	
+	switch (m_level){
+		
+		case 2: {
+			data = &in->plant;
+			emit_offset = 2;
+			for(int i = 0; i < 8; ++i){
+				if(neighbours[i] != NULL){
+					neighbour_data[i] = &neighbours[i]->plant;
+				}else{
+					neighbour_data[i] = NULL;
+				}
+			}
+			break;
+		}
+		
+		case 1: {
+			data = &in->water;
+			emit_offset = 1;
+			for(int i = 0; i < 8; ++i){
+				if(neighbours[i] != NULL){
+					neighbour_data[i] = &neighbours[i]->water;
+				}else{
+					neighbour_data[i] = NULL;
+				}
+			}
+			break;
+		}
+		
+		default: {
+			data = &in->data;
+			emit_offset = 0;
+			for(int i = 0; i < 8; ++i){
+				if(neighbours[i] != NULL){
+					neighbour_data[i] = &neighbours[i]->data;
+				} else{
+					neighbour_data[i] = NULL;
+				}
+			}
+			break;
+		}
+	}
+	
+	emit_offset = emit_offset * 2 + !in->updatemesh;
+	
+	DFA_clear(&in->mesh_buffer[emit_offset]);
+	
+	(*routine)(in, data, neighbours, neighbour_data, emit_offset, m_level);
+		
+}
+
 void do_updates_for_list (struct CLL* list){
 	lock_list(list);
 	
@@ -496,11 +585,14 @@ void do_updates_for_list (struct CLL* list){
 	for(p = list->first; p != NULL; p = p->nxt){
 		chunk_data_sync(p->data);
 		
-		build_chunk_mesh(p->data, 0); // Build Block Mesh
-		build_chunk_mesh(p->data, 1); // Build Water Mesh
+		build_chunk_mesh(p->data, 0, &standard_mesh_routine); // Build Block Mesh
+		build_chunk_mesh(p->data, 1, &standard_mesh_routine); // Build Water Mesh
+		build_chunk_mesh(p->data, 2, &plant_mesh_routine); // Build Water Mesh
 		
 		p->data->updatemesh = !p->data->updatemesh;
-		p->data->vbo_update[0] = true;p->data->vbo_update[1] = true;
+		p->data->vbo_update[0] = true;
+		p->data->vbo_update[1] = true;
+		p->data->vbo_update[2] = true;
 		
 		chunk_data_unsync(p->data);
 	}
@@ -518,7 +610,10 @@ void* builder_thread_func (void* arg){
 	pthread_mutex_lock(&chunk_builder_mutex);
 	while(is_running){
 		pthread_cond_wait(&chunk_builder_lock, &chunk_builder_mutex);
+		
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 		do_updates_for_list(&chunk_list[buildlist]);
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 	}
 	pthread_mutex_unlock(&chunk_builder_mutex);
 	pthread_mutex_destroy(&chunk_builder_mutex);
@@ -540,6 +635,7 @@ bool initialize_builder_thread (){
 				temp->mesh_buffer[i] = DFA_init();
 				glGenBuffers(1, &temp->mesh_vbo[0]);
 				glGenBuffers(1, &temp->mesh_vbo[1]);
+				glGenBuffers(1, &temp->mesh_vbo[2]);
 			}
 			
 			temp->_x = x;
@@ -568,6 +664,9 @@ bool initialize_builder_thread (){
 void terminate_builder_thread (){
 	
 	is_running = false;
+
+	for(int i = 0; i < NUM_BUILDER_THREADS; i++){pthread_cancel(builder_thread[i]);}
+	
 	trigger_builder_update();
 
 	for(int i = 0; i < NUM_BUILDER_THREADS;i++){pthread_join(builder_thread[i], NULL);}
@@ -582,7 +681,6 @@ void terminate_builder_thread (){
 	for(int i = 0; i < NUMLISTS;i++){lock_list(&chunk_list[i]);}
 	CLL_freeListAndData(&chunk_list[0]);
 	for(int i = 1; i < NUMLISTS;i++){CLL_freeList(&chunk_list[i]);}
-	
 	for(int i = 0; i < NUMLISTS;i++){CLL_destroyList(&chunk_list[i]);}
 	
 	pthread_cond_destroy(&chunk_builder_lock);

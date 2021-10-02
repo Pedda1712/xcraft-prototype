@@ -2,7 +2,7 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 32
+#define WORLD_RANGE 12
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
@@ -12,15 +12,18 @@
 
 #define BLOCK_SIZE 1.0f
 
-#define MESH_LEVELS 4
+#define MESH_LEVELS 6
+
 #define WATER_LEVEL 28
+#define SGRASS_LEVEL 96
+#define SNOW_LEVEL 112
 
 #define WATER_SURFACE_OFFSET (1.0f/8.0f)
 
 #define MAX_LIGHT 10
 #define MIN_LIGHT 1
 
-#define BLOCK_TYPE_COUNT 7
+#define BLOCK_TYPE_COUNT 17
 
 #define AIR_B    0
 #define GRASS_B  1
@@ -29,6 +32,16 @@
 #define GRAVEL_B 4
 #define WATER_B  5
 #define LIGHT_B  6
+#define SGRASS_B 7
+#define SNOW_B   8   
+#define XGRASS_B 9
+#define XGRAST_B 10
+#define XFLOW1_B 11
+#define XFLOW2_B 12
+#define XFLOW3_B 13
+#define XFLOW4_B 14
+#define XFLOW5_B 15
+#define XFLOW6_B 16
 
 #define ATCHUNK(x,z) ((x) + ((z) * (WORLD_RANGE*2+1)))
 #define ATBLOCK(x,y,z) ((x) + ((z) * CHUNK_SIZE) + ((y) * CHUNK_LAYER))
@@ -67,6 +80,7 @@ struct sync_chunk_t {
 	 */
 	struct chunk_t data;
 	struct chunk_t water;
+	struct chunk_t plant;
 	struct chunk_t light;
 
 	/*
@@ -77,9 +91,9 @@ struct sync_chunk_t {
 	 */
 	
 	bool updatemesh;
-	bool vbo_update[2];
+	bool vbo_update[MESH_LEVELS/2];
 	uint32_t mesh_vbo [MESH_LEVELS/2];
-	uint32_t verts [2];
+	uint32_t verts [MESH_LEVELS/2];
 	struct DFA mesh_buffer[MESH_LEVELS];
 	
 	/*
