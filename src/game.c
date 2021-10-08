@@ -26,8 +26,8 @@
 #include <math.h>
 
 // To be moved into a config file at some point
-#define P_SPEED 10.0f
-#define P_SHIFT_SPEED 20.0f
+#define P_SPEED 20.0f
+#define P_SHIFT_SPEED 40.0f
 
 struct GLL state_stack;
 struct GLL state_update_stack;
@@ -129,11 +129,19 @@ void tt_game () {
 	GLL_add(&state_stack, &debug_fps_pos_state);
 }
 
-void transistion_to_game (){
+void continue_to_game (){
 	GLL_add(&state_update_stack, &tt_game);
 }
 
 void tt_regen () {
+	
+	gst._player_x = 0.0f;
+	gst._player_y = 126.0f;
+	gst._player_z = 0.0f;
+	gst._p_chunk_x = 0;
+	gst._p_chunk_z = 0;
+	gst._angle_x = -0.5f;
+	gst._angle_y = 0.0f;
 	
 	srand(time(NULL));
 	seeded_noise_shuffle (rand());
@@ -143,14 +151,6 @@ void tt_regen () {
 	for(struct CLL_element* e = chunk_list[0].first; e != NULL; e = e->nxt){
 		e->data->initialized = false;
 	}
-	
-	gst._player_x = 0.0f;
-	gst._player_y = 126.0f;
-	gst._player_z = 0.0f;
-	gst._p_chunk_x = 0;
-	gst._p_chunk_z = 0;
-	gst._angle_x = -0.5f;
-	gst._angle_y = 0.0f;
 
 	// Generate the initial Chunks on the main thread
 	//run_chunk_generation_atprev();
@@ -158,7 +158,7 @@ void tt_regen () {
 	// Generate the initial Chunks on the main thread
 	run_chunk_generation(&pos);
 	
-	transistion_to_game();
+	GLL_add(&state_update_stack, &tt_game);
 }
 
 void transition_regen (){
@@ -201,26 +201,26 @@ void world_input_state  (float frameTime){
 	float velz = 0.0f;
 	if(xg_keyboard_modif(XK_Shift_L)){
 		//p_speed = P_SHIFT_SPEED;
-		vely = -10.f;
+		vely = -P_SPEED;
 	}
 	if(xg_keyboard_ascii(' ')){
-		vely  = 10.f;
+		vely  = P_SPEED;
 	}
 	if(xg_keyboard_ascii('w')){
-		velx += 10.0f * (gst._dir_x / dirwalkcomplength);
-		velz += 10.0f * (gst._dir_z / dirwalkcomplength);
+		velx += P_SPEED * (gst._dir_x / dirwalkcomplength);
+		velz += P_SPEED * (gst._dir_z / dirwalkcomplength);
 	}
 	if(xg_keyboard_ascii('s')){
-		velx -= 10.0f * (gst._dir_x / dirwalkcomplength);
-		velz -= 10.0f * (gst._dir_z / dirwalkcomplength);
+		velx -= P_SPEED * (gst._dir_x / dirwalkcomplength);
+		velz -= P_SPEED * (gst._dir_z / dirwalkcomplength);
 	}
 	if(xg_keyboard_ascii('d')){
-		velx += 10.0f * _strafe_x;
-		velz += 10.0f * _strafe_z;
+		velx += P_SPEED * _strafe_x;
+		velz += P_SPEED * _strafe_z;
 	}
 	if(xg_keyboard_ascii('a')){
-		velx -= 10.0f * _strafe_x;
-		velz -= 10.0f * _strafe_z;
+		velx -= P_SPEED * _strafe_x;
+		velz -= P_SPEED * _strafe_z;
 	}
 	
 	/*
@@ -383,7 +383,7 @@ void world_render_state (float fTime){
 	glEnable(GL_BLEND);
 	for(p = chunk_list[0].first; p!= NULL; p = p->nxt){
 		struct sync_chunk_t* ch = p->data;
-		// Render Water
+		// Render data_unique
 
 		if(ch->vbo_update[1]){
 			chunk_data_sync(ch);
@@ -411,7 +411,7 @@ void world_render_state (float fTime){
 	glDisable(GL_CULL_FACE);
 	for(p = chunk_list[0].first; p!= NULL; p = p->nxt){
 		struct sync_chunk_t* ch = p->data;
-		// Render Water
+		// Render data_unique
 
 		if(ch->vbo_update[2]){
 			chunk_data_sync(ch);
@@ -473,7 +473,7 @@ void debug_fps_pos_state(float frameTime){
 	
 	char fps_txt [50];
 	setfont(gst._gfx_font);
-	drawstring("XCraft build-02/10/21", 0.0f, 0.0f, 0.44f);
+	drawstring("XCraft build-08/10/21", 0.0f, 0.0f, 0.44f);
 	sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
  	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);
@@ -486,7 +486,7 @@ void debug_fps_pos_state(float frameTime){
 }
 
 void init_game () {
-	// To be moved into Save/Config files eventually ...
+	// Can be overriden by saved values ..
 	gst._player_x = 0.0f;
 	gst._player_y = 126.0f;
 	gst._player_z = 0.0f;
@@ -511,6 +511,8 @@ void init_game () {
 	gst._player_box._w = 0.5;
 	gst._player_box._h = 1.8;
 	gst._player_box._l = 0.5;
+	
+	set_world_name ("default");
 	
 	struct chunkspace_position pos = {0,0};
 	// Generate the initial Chunks on the main thread
@@ -546,7 +548,7 @@ void init_game () {
 	
 	world_selection_button_list = GLL_init();
 	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("XCraft", UI_TITLE_SCALE), 0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f, UI_TITLE_SCALE, BUTTON1_OFFSET, BUTTON1_OFFSET, "XCraft", &empty, &empty) );
-	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned(" Continue ", UI_SCALE), 1.0f, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, " Continue ", &empty, &transistion_to_game));
+	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned(" Continue ", UI_SCALE), 1.0f, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, " Continue ", &empty, &continue_to_game));
 	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("Regenerate", UI_SCALE), 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, "Regenerate", &empty, &transition_regen) );
 	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("   Back   ", UI_SCALE), 1.0f + 6*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, "   Back   ", &empty, &transition_to_main_menu) );
 	
@@ -558,6 +560,9 @@ void init_game () {
 }
 
 void exit_game () {
+	
+	dump_player_data();
+	
 	GLL_free_rec (&main_menu_button_list);
 	GLL_free_rec (&world_selection_button_list);
 	GLL_free (&state_stack); 

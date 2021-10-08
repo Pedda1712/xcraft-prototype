@@ -9,6 +9,8 @@
 
 #include <ftw.h>
 
+#include <game.h>
+
 char w_path [MAX_WORLDNAME_LENGTH];
 
 void delete_current_world (){
@@ -38,13 +40,45 @@ void set_world_name (char* w_name){
 		fwrite(p, 1, 512, f);
 		fclose(f);
 		
+		dump_player_data();
+		
 	}else {
 		char seedf [100];
 		sprintf(seedf, "%s/seed.dat", w_path);
 		FILE* f = fopen (seedf, "rb");
 		fread(p, 1, 512, f);
 		fclose(f);
+		
+		read_player_data();
 	}
+}
+
+void dump_player_data () {
+	char f [512];
+	
+	sprintf(f, "%s/player.bin", w_path);
+	
+	FILE* p_file = fopen(f, "wb");
+	
+	fwrite(&gst._player_x, 1, sizeof(float), p_file);
+	fwrite(&gst._player_y, 1, sizeof(float), p_file);
+	fwrite(&gst._player_z, 1, sizeof(float), p_file);
+	
+	fclose(p_file);
+}
+
+void read_player_data () {
+	char f [512];
+	
+	sprintf(f, "%s/player.bin", w_path);
+	
+	FILE* p_file = fopen(f, "rb");
+	
+	fread(&gst._player_x, 1, sizeof(float), p_file);
+	fread(&gst._player_y, 1, sizeof(float), p_file);
+	fread(&gst._player_z, 1, sizeof(float), p_file);
+	
+	fclose(p_file);
 }
 
 void dump_chunk (struct sync_chunk_t* c){
@@ -63,7 +97,7 @@ void dump_chunk (struct sync_chunk_t* c){
 		perror("Error: ");
 	}
 	
-	fwrite (c->water.block_data, 1, CHUNK_MEM, file);
+	fwrite (c->data_unique.block_data, 1, CHUNK_MEM, file);
 	
 	fclose (file);
 	
@@ -81,7 +115,7 @@ bool read_chunk (struct sync_chunk_t* c){
 	if (access (f, F_OK) == 0){
 		FILE* file = fopen(f, "rb");
 		
-		fread (c->water.block_data, 1, CHUNK_MEM, file);
+		fread (c->data_unique.block_data, 1, CHUNK_MEM, file);
 		
 		fclose (file);
 		return true;

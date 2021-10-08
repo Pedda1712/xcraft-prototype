@@ -40,9 +40,6 @@ int main () {
 	printf ("Loading BTD 'blockdef.btd' ...\n");
 	loadblockdef("blockdef.btd");
 	
-	set_world_name ("default");
-	//delete_current_world();
-	
 	printf("Initializing Builder Thread ...\n");
 	if(!initialize_builder_thread()){
 		printf("Failed to initialize Builder Threads!\n");

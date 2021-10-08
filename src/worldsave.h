@@ -12,7 +12,9 @@ void dump_seed ();
 void read_seed ();
 
 void dump_chunk (struct sync_chunk_t* c);
+void dump_player_data ();
 
 bool read_chunk (struct sync_chunk_t* c);
+void read_player_data ();
 
 #endif

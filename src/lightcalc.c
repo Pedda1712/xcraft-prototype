@@ -32,7 +32,7 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 				pthread_mutex_init(&temp->c_mutex, NULL); // This mutex is never used, but is destroyed by CLL_freeListAndData
 				
 				memcpy(temp->data.block_data, current->data.block_data, CHUNK_MEM);
-				memcpy(temp->water.block_data, current->water.block_data, CHUNK_MEM);
+				memcpy(temp->data_unique.block_data, current->data_unique.block_data, CHUNK_MEM);
 				memcpy(temp->light.block_data, current->light.block_data, CHUNK_MEM);
 				temp->_x = current->_x;
 				temp->_z = current->_z;
@@ -76,11 +76,12 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 			
 	}
 	
-	for(p = calc_list.first; p != NULL; p = p->nxt){ // Delete Existing Light Data
+	for(p = calc_list.first; p != NULL; p = p->nxt){ // delete temporary lightlist copies
+		GLL_free_rec(&p->data->lightlist);
 		GLL_destroy(&p->data->lightlist);
 	}
 	
-	CLL_freeListAndData(&calc_list); // AndData, to delete the copies
+	CLL_freeListAndData(&calc_list); // And Data, to delete the copies
 	CLL_destroyList(&calc_list);
 	
 }
@@ -138,7 +139,7 @@ void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int z, uin
 	}
 	
 	if(y-1 >= 0){
-		if (sct->water.block_data [ATBLOCK(x, y-1, z)] == WATER_B) down_fac = 1; // Light doesnt "flow" freely through water
+		if (sct->data_unique.block_data [ATBLOCK(x, y-1, z)] == data_unique_B) down_fac = 1; // Light doesnt "flow" freely through data_unique
 		rec_skylight_func_sides (sct, x, y-1, z, llevel - down_fac, true, calc_list);
 	}
 }
@@ -147,7 +148,7 @@ void skylight_func (struct CLL* calc_list){
 
 	struct CLL_element* p;
 	for(p = calc_list->first; p != NULL; p = p->nxt){
-		int y = CHUNK_SIZE_Y - 1;
+
 		struct sync_chunk_t* sct = p->data;
 		for (int x = 0; x < CHUNK_SIZE; x++){
 			for(int z = 0; z < CHUNK_SIZE; z++){
@@ -160,7 +161,7 @@ void skylight_func (struct CLL* calc_list){
 					
 					sct->light.block_data[ATBLOCK(x, y, z)] = llevel;
 					
-					if (sct->water.block_data [ATBLOCK(x, y-1, z)] == WATER_B) llevel--;
+					if (sct->data_unique.block_data [ATBLOCK(x, y-1, z)] == data_unique_B) llevel--;
 					
 				}
 			}
