@@ -139,7 +139,7 @@ void generate_chunk_data () {
 					uint8_t top_layer_block = SNOW_B; //Grass
 					uint8_t sec_layer_block = SNOW_B;  //Dirt 
 					uint8_t thr_layer_block = STONE_B; //Stone
-					uint8_t liquid_layer    = data_unique_B; //data_unique
+					uint8_t liquid_layer    = WATER_B; //data_unique
 					
 					float ocean_modif = (noise((cx + x * CHUNK_SIZE) * 0.005f, 0, (cz + z * CHUNK_SIZE) * 0.005f)) * 0.5f + (noise((cx + x * CHUNK_SIZE) * 0.00125f, 0, (cz + z * CHUNK_SIZE) * 0.00125f)) * 0.5f;
 					
@@ -174,7 +174,7 @@ void generate_chunk_data () {
 							sec_layer_block = DIRT_B;
 						}
 						
-						if( cy < data_unique_LEVEL + 1){
+						if( cy < WATER_LEVEL + 1){
 							top_layer_block = GRAVEL_B; //Gravel
 							sec_layer_block = GRAVEL_B; //Gravel
 						}
@@ -214,7 +214,7 @@ void generate_chunk_data () {
 								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = GRAVEL_B;
 								p->data->data_unique.block_data[ATBLOCK(cx,cy,cz)] = GRAVEL_B;
 							}
-							else if(cy < data_unique_LEVEL){
+							else if(cy < WATER_LEVEL){
 								p->data->data_unique.block_data[ATBLOCK(cx, cy, cz)] = liquid_layer;
 							}
 							depth_below = 0;
@@ -227,7 +227,7 @@ void generate_chunk_data () {
 				for(int z = 0; z < CHUNK_SIZE; z++){
 					for(int y = 0; y < CHUNK_SIZE_Y; y++){
 						int i = x  + z * CHUNK_SIZE + y * CHUNK_LAYER;
-						if(p->data->data_unique.block_data[i] != data_unique_B && (p->data->data_unique.block_data[i] < XGRASS_B || p->data->data_unique.block_data[i] > XFLOW6_B)){
+						if(p->data->data_unique.block_data[i] != WATER_B && (p->data->data_unique.block_data[i] < XGRASS_B || p->data->data_unique.block_data[i] > XFLOW6_B)){
 							p->data->data.block_data[i] = p->data->data_unique.block_data[i];
 						}
 						if(p->data->data.block_data[i] == LIGHT_B){

@@ -383,7 +383,7 @@ void world_render_state (float fTime){
 	glEnable(GL_BLEND);
 	for(p = chunk_list[0].first; p!= NULL; p = p->nxt){
 		struct sync_chunk_t* ch = p->data;
-		// Render data_unique
+		// Render water
 
 		if(ch->vbo_update[1]){
 			chunk_data_sync(ch);
@@ -411,7 +411,7 @@ void world_render_state (float fTime){
 	glDisable(GL_CULL_FACE);
 	for(p = chunk_list[0].first; p!= NULL; p = p->nxt){
 		struct sync_chunk_t* ch = p->data;
-		// Render data_unique
+		// Render plants
 
 		if(ch->vbo_update[2]){
 			chunk_data_sync(ch);

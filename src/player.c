@@ -156,7 +156,7 @@ bool place_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 		
 		if (in->data.block_data[ATBLOCK(ccx, ccy, ccz)] == AIR_B){
 			
-			if(gst._selected_block != data_unique_B){
+			if(gst._selected_block != WATER_B){
 				in->data.block_data[ATBLOCK(ccx, ccy, ccz)] = gst._selected_block;
 				in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)] = gst._selected_block;
 				

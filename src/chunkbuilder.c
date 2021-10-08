@@ -46,7 +46,7 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 	
 	float y_offset = 0.0f;
 	if(offset >= 2)
-		y_offset = data_unique_SURFACE_OFFSET;
+		y_offset = WATER_SURFACE_OFFSET;
 
 	float vertex_coordinates [12];
 	float tex_coordinates [8];
@@ -121,7 +121,7 @@ void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, fl
 	
 	float lightmul = (float)lightlevel / (float)MAX_LIGHT;
 	
-	float y_offset = data_unique_SURFACE_OFFSET;
+	float y_offset = WATER_SURFACE_OFFSET;
 	
 	bool xp = (bor[0] == AIR_B);
 	bool xm = (bor[1] == AIR_B);
@@ -308,7 +308,7 @@ void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struc
 			if(y + 1 > CHUNK_SIZE_Y){
 				return true;
 			}else{
-				if(data->block_data[ATBLOCK(x, y+1, z)] == data_unique_B){
+				if(data->block_data[ATBLOCK(x, y+1, z)] == WATER_B){
 					return false;
 				}else{
 					return true;
@@ -331,7 +331,7 @@ void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struc
 				bool emitter_cond; // Depending on the target, the condition for spawning a block face may vary
 				switch(m_level){
 					case 1: {
-						emitter_cond = block_t == data_unique_B; // Only data_unique Blocks can spawn faces
+						emitter_cond = block_t == WATER_B; // Only data_unique Blocks can spawn faces
 						break;
 					}
 					default: {
@@ -351,7 +351,7 @@ void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struc
 					if(!((y + 1) == CHUNK_SIZE_Y)){
 						if(data->block_data[ATBLOCK(x,y+1,z)] == 0){
 							emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)]);
-						}else if (data->block_data[ATBLOCK(x,y+1,z)] != data_unique_B){ // Special Case for data_unique only
+						}else if (data->block_data[ATBLOCK(x,y+1,z)] != WATER_B){ // Special Case for data_unique only
 							if(m_level == 1){
 								load_borders (x, y+1, z);
 								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)]);
@@ -571,8 +571,8 @@ void do_updates_for_list (struct CLL* list){
 		chunk_data_sync(p->data);
 		
 		build_chunk_mesh(p->data, 0, &standard_mesh_routine); // Build Block Mesh
-		build_chunk_mesh(p->data, 1, &standard_mesh_routine); // Build data_unique Mesh
-		build_chunk_mesh(p->data, 2, &plant_mesh_routine); // Build data_unique Mesh
+		build_chunk_mesh(p->data, 1, &standard_mesh_routine); // Build Water Mesh
+		build_chunk_mesh(p->data, 2, &plant_mesh_routine); // Build Plant Mesh
 		
 		p->data->updatemesh = !p->data->updatemesh;
 		p->data->vbo_update[0] = true;

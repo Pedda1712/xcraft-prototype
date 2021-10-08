@@ -14,11 +14,11 @@
 
 #define MESH_LEVELS 6
 
-#define data_unique_LEVEL 28
+#define WATER_LEVEL 28
 #define SGRASS_LEVEL 96
 #define SNOW_LEVEL 112
 
-#define data_unique_SURFACE_OFFSET (1.0f/8.0f)
+#define WATER_SURFACE_OFFSET (1.0f/8.0f)
 
 #define MAX_LIGHT 10
 #define MIN_LIGHT 1
@@ -30,7 +30,7 @@
 #define DIRT_B   2
 #define STONE_B  3
 #define GRAVEL_B 4
-#define data_unique_B  5
+#define WATER_B  5
 #define LIGHT_B  6
 #define SGRASS_B 7
 #define SNOW_B   8   
@@ -73,20 +73,13 @@ struct sync_chunk_t {
 	int32_t _z;
 	
 	/*
-	 * data: all blocks EXCEPT data_unique AND plants
-	 * data_unique: all blocks INCLUDING data_unique AND plants // weird solution, but was easy to implement with existing code :P
+	 * data: all blocks EXCEPT water AND plants
+	 * data_unique: all blocks INCLUDING water AND plants // weird solution, but was easy to implement with existing code :P
 	 * light: lightlevel at block
 	 */
 	struct chunk_t data;
 	struct chunk_t data_unique;
 	struct chunk_t light;
-
-	/*
-		0 -> Chunk Mesh 
-		1 -> Chunk Mesh (float buffer)
-		2 -> data_unique Mesh
-		3 -> data_unique Mesh (float buffer)
-	 */
 	
 	bool updatemesh;
 	bool vbo_update[MESH_LEVELS/2];
