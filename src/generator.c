@@ -35,7 +35,7 @@ struct chunkspace_position chunk_gen_arg;
 #define HFUNC(y, m ,l) ((m) * (y) - (m) * (l))
 // y -> height, m -> slope, l -> "sea level"
 
-float block_noise (float x, float y, float z, float slope, float median_height){ 
+static float block_noise (float x, float y, float z, float slope, float median_height){ 
 	float first_oct  = noise((x) * 0.02f, (y) * 0.0125f, (z) * 0.02f);
 	float second_oct = noise((x) * 0.04f, (y) * 0.05f, (z) * 0.04f);
 	float third_oct  = noise((x) * 0.08f, (y) * 0.1f, (z) * 0.08f);
@@ -123,6 +123,8 @@ void generate_chunk_data () {
 		
 		memset(p->data->data.block_data, 0, CHUNK_MEM);
 		memset(p->data->data_unique.block_data, 0, CHUNK_MEM);
+		memset(p->data->light.block_data, 0, CHUNK_MEM);
+		
 		GLL_lock(&p->data->lightlist);
 		GLL_free_rec (&p->data->lightlist);
 		GLL_unlock(&p->data->lightlist);
@@ -142,13 +144,14 @@ void generate_chunk_data () {
 					uint8_t liquid_layer    = WATER_B; //data_unique
 					
 					float ocean_modif = (noise((cx + x * CHUNK_SIZE) * 0.005f, 0, (cz + z * CHUNK_SIZE) * 0.005f)) * 0.5f + (noise((cx + x * CHUNK_SIZE) * 0.00125f, 0, (cz + z * CHUNK_SIZE) * 0.00125f)) * 0.5f;
+					ocean_modif-=0.05125f;
 					
 					float ocean_slope = (ocean_modif < 0.0f) ? 0.0f : ocean_modif;
-					float slope_modifier = (noise((cx + x * CHUNK_SIZE) * 0.005f, 300.0f, (cz + z * CHUNK_SIZE) * 0.005f) + 1.002f) + ocean_slope * (5 * ocean_slope + 6);
-					slope_modifier = pow(slope_modifier, 8);
+					float slope_modifier = (noise((cx + x * CHUNK_SIZE) * 0.005f, 300.0f, (cz + z * CHUNK_SIZE) * 0.005f) + 1.125f) + ocean_slope * (5 * ocean_slope + 6); // how strong the height based fade out is (higher fadeout -> flatter terrain, ocean contributes to flatness to have less islands)
+					slope_modifier = pow(slope_modifier, 16); // make distinction between flat and hilly areas more distinctive by raising to power
 					
-					float median_f = pow(2, -(slope_modifier-6.01f)) + 32;
-					median_f -= 16 * ocean_slope * (5 * ocean_slope + 6);
+					float median_f = pow(2, -(slope_modifier-6.01f)) + 32; // 32 is standard "plains" level, more mountain, higher median level
+					median_f -= 16 * ocean_slope * (5 * ocean_slope + 6); // subtract up to 16 from median when ocean
 					
 					slope_modifier = slope_modifier * 0.014f;
 					if(slope_modifier < 0.014f) slope_modifier = 0.014f;
@@ -273,7 +276,7 @@ void generate_chunk_data () {
 	unlock_list(&chunk_list[2]);
 }
 
-void* chunk_gen_thread (){
+static void* chunk_gen_thread (){
 	pthread_mutex_lock(&chunk_gen_mutex);
 	while(is_chunkgen_running){
 		pthread_cond_wait(&chunk_gen_lock, &chunk_gen_mutex);

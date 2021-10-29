@@ -33,6 +33,7 @@ void xg_set_mouse_position (int32_t x, int32_t y);
 void xg_cursor_set (bool vis, uint8_t shape);
 
 void emptyfnc (bool b);
+void xg_set_keyboard_callback(void (*fncptr)(bool, KeySym, char));
 void xg_set_button1_callback (void (*fncptr)(bool));
 void xg_set_button2_callback (void (*fncptr)(bool));
 void xg_set_button3_callback (void (*fncptr)(bool));

@@ -40,6 +40,7 @@ void empty ();
 
 void world_input_state  (float fTime);
 void world_render_state (float fTime);
+void world_overlay_state (float fTime);
 void debug_fps_pos_state(float fTime);
 
 void menu_input_state (float fTime);

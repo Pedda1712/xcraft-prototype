@@ -19,7 +19,7 @@
 /*
 	Minecraft Clone in C, using:
 		- Xlib for Windowing
-		- Immediate Mode OpenGL for Graphics
+		- OpenGL 2.0 for Graphics
  */
 
 uint16_t width = 1280;

@@ -38,7 +38,7 @@ pthread_cond_t chunk_builder_lock;
 
 bool is_running;
 
-void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel){
+static void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel){
 
 	float lightmul = (Y_AXIS == axis) ? ( mirorred ? 1.0f : 0.45f) : 0.8f; // Light Level depending on block side
 	lightmul *= (Z_AXIS == axis) ? 0.7f : 1.0f;
@@ -117,29 +117,37 @@ void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t a
 	}
 }
 
-void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t block_t, uint8_t offset, uint8_t* bor, uint8_t lightlevel){
+static void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t block_t, uint8_t offset, uint8_t* bor, uint8_t lightlevel, bool n_logic, uint8_t comp){
 	
 	float lightmul = (float)lightlevel / (float)MAX_LIGHT;
 	
 	float y_offset = WATER_SURFACE_OFFSET;
 	
-	bool xp = (bor[0] == AIR_B);
-	bool xm = (bor[1] == AIR_B);
-	bool zp = (bor[2] == AIR_B);
-	bool zm = (bor[3] == AIR_B);
-	bool xpzp = (bor[4] == AIR_B);
-	bool xpzm = (bor[5] == AIR_B);
-	bool xmzp = (bor[6] == AIR_B);
-	bool xmzm = (bor[7] == AIR_B);
+	bool xp = (bor[0] == comp);
+	bool xm = (bor[1] == comp);
+	bool zp = (bor[2] == comp);
+	bool zm = (bor[3] == comp);
+	bool xpzp = (bor[4] == comp);
+	bool xpzm = (bor[5] == comp);
+	bool xmzp = (bor[6] == comp);
+	bool xmzm = (bor[7] == comp);
 	
 	float vertex_coordinates [12];
 	float tex_coordinates [8];
 	
+	bool conds [4] = {((zp || xm) || xmzp),((zp || xp) || xpzp),((zm || xp) || xpzm),((zm || xm) || xmzm)};
+	if (n_logic){
+		conds[0] = !((zp || xm) || xmzp);
+		conds[1] = !((zp || xp) || xpzp);
+		conds[2] = !((zm || xp) || xpzm);
+		conds[3] = !((zm || xm) || xmzm);
+	}
+	
 	// Emit Vertices
-	vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + BLOCK_SIZE - y_offset * ((zp || xm) || xmzp);vertex_coordinates[2] = wz + BLOCK_SIZE;
-	vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy + BLOCK_SIZE - y_offset * ((zp || xp) || xpzp);vertex_coordinates[5] = wz + BLOCK_SIZE;
-	vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * ((zm || xp) || xpzm);vertex_coordinates[8] = wz;
-	vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * ((zm || xm) || xmzm);vertex_coordinates[11] = wz;
+	vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + BLOCK_SIZE - y_offset * conds[0];vertex_coordinates[2] = wz + BLOCK_SIZE;
+	vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy + BLOCK_SIZE - y_offset * conds[1];vertex_coordinates[5] = wz + BLOCK_SIZE;
+	vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * conds[2];vertex_coordinates[8] = wz;
+	vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * conds[3];vertex_coordinates[11] = wz;
 	
 	// Emit TexCoords
 	struct blocktexdef_t tex = btd_map[block_t];
@@ -161,7 +169,7 @@ void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, fl
 	}
 }
 
-void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
+static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
 	
 	int chunk_x = in->_x;
 	int chunk_z = in->_z;
@@ -349,12 +357,17 @@ void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struc
 					bool shortened_block = is_shortened (x, y, z); // Determine if the top side of the block is shifted down
 					
 					if(!((y + 1) == CHUNK_SIZE_Y)){
-						if(data->block_data[ATBLOCK(x,y+1,z)] == 0){
-							emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)]);
-						}else if (data->block_data[ATBLOCK(x,y+1,z)] != WATER_B){ // Special Case for data_unique only
+						if(data->block_data[ATBLOCK(x,y+1,z)] == AIR_B){
+							if(m_level != 1){
+								emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)]);
+							}else{
+								load_borders (x, y+1, z);
+								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)], true, WATER_B);
+							}
+						}else if (data->block_data[ATBLOCK(x,y+1,z)] != WATER_B){ // Special Case for water only
 							if(m_level == 1){
 								load_borders (x, y+1, z);
-								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)]);
+								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)], false, AIR_B);
 							}
 						}
 					}else{
@@ -422,7 +435,7 @@ void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struc
 	}
 }
 
-void emit_x (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel){
+static void emit_x (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel){
 	
 	float lightmul = (float)lightlevel / (float)MAX_LIGHT;
 	
@@ -462,7 +475,7 @@ void emit_x (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis
 	}
 } 
 
-void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
+static void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
 	
 	int chunk_x = in->_x;
 	int chunk_z = in->_z;
@@ -489,7 +502,7 @@ void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct s
 	}
 }
 
-void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level, void (*routine) (struct sync_chunk_t*, struct chunk_t*, struct sync_chunk_t**,struct chunk_t** ,uint32_t, uint32_t)){	
+static void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level, void (*routine) (struct sync_chunk_t*, struct chunk_t*, struct sync_chunk_t**,struct chunk_t** ,uint32_t, uint32_t)){	
 	
 	int chunk_x = in->_x;
 	int chunk_z = in->_z;
@@ -556,19 +569,13 @@ void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level, void (*routine)
 
 void do_updates_for_list (struct CLL* list){
 	lock_list(list);
-	
-	struct CLL_element* p;
-	for(p = list->first; p != NULL; p = p->nxt){
-		
 
+	
+	for(struct CLL_element* p = list->first; p != NULL; p = p->nxt){
+		chunk_data_sync(p->data);
+		
 		calculate_light(p->data, &skylight_func, true);
 		calculate_light(p->data, &blocklight_func, false);
-
-		chunk_data_unsync(p->data);
-	}
-	
-	for(p = list->first; p != NULL; p = p->nxt){
-		chunk_data_sync(p->data);
 		
 		build_chunk_mesh(p->data, 0, &standard_mesh_routine); // Build Block Mesh
 		build_chunk_mesh(p->data, 1, &standard_mesh_routine); // Build Water Mesh
@@ -585,7 +592,7 @@ void do_updates_for_list (struct CLL* list){
 	unlock_list(list);
 }
 
-void* builder_thread_func (void* arg){
+static void* builder_thread_func (void* arg){
 	
 	int buildlist = *(int*)arg;
 	

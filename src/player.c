@@ -111,6 +111,7 @@ bool break_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 					
 				}
 			}
+
 			unlock_list(&chunk_list[3]);
 			trigger_builder_update();
 			
@@ -182,6 +183,7 @@ bool place_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 					
 				}
 			}
+
 			unlock_list(&chunk_list[3]);
 			trigger_builder_update();
 			

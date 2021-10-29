@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct button_t* ui_create_button (int width, int height, float x, float y, float scale, uint8_t BACKGROUND, uint8_t BACKGROUND_HIGHLIGHTED, char* b_str, void (*h)(void), void (*c)(void)){
+struct button_t* ui_create_button (int width, int height, float x, float y, float scale, uint8_t BACKGROUND, uint8_t BACKGROUND_HIGHLIGHTED, char* b_str, void (*h)(struct button_t*), void (*c)(struct button_t*)){
 	struct button_t* crt = malloc ( sizeof (struct button_t) );
 	crt->_x = x; crt->_y = y; crt->highlighted_func = h; crt->clicked_func = c;
 	crt->_scale = scale;
@@ -17,7 +17,7 @@ struct button_t* ui_create_button (int width, int height, float x, float y, floa
 	return crt;
 }
 
-struct button_t* ui_create_button_fit (float x, float y, float scale, uint8_t BACKGROUND, uint8_t BACKGROUND_HIGHLIGHTED, char* b_str, void (*h)(void), void (*c)(void)){
+struct button_t* ui_create_button_fit (float x, float y, float scale, uint8_t BACKGROUND, uint8_t BACKGROUND_HIGHLIGHTED, char* b_str, void (*h)(struct button_t*), void (*c)(struct button_t*)){
 	return ui_create_button ( strlen (b_str) + 2, 3, x, y, scale, BACKGROUND, BACKGROUND_HIGHLIGHTED, b_str, h, c);
 }
 
@@ -26,4 +26,11 @@ void ui_destroy_button (struct button_t* b){
 	PG_free (b->backh);
 	PG_free (b->forg);
 	free (b);
+}
+
+void GLL_free_rec_btn (struct GLL* gll){
+	for ( struct GLL_element* e = gll->first; e != 0; e = e->next){
+		ui_destroy_button((struct button_t*)e->data);
+	}
+	GLL_free(gll);
 }

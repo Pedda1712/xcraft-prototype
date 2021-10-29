@@ -40,30 +40,32 @@ struct GLL world_selection_button_list;
 struct GLL main_menu_button_list;
 struct GLL current_button_list;
 
-void menu_action_callback (bool pressed){
+static void menu_action_callback (bool pressed){
 	if (pressed) {
 		for( struct GLL_element* e = current_button_list.first; e != NULL; e = e->next){
 		
 		struct button_t* bt = (struct button_t*)e->data;
 			if ( gst._mouse_x > bt->_x && gst._mouse_x < (bt->_x + bt->forg->width * CHARACTER_BASE_SIZE_X * bt->_scale) && gst._mouse_y > bt->_y && gst._mouse_y < ((bt->_y + bt->forg->height * CHARACTER_BASE_SIZE_Y * bt->_scale)) ){
-				bt->clicked_func();
+				bt->clicked_func(bt);
 			}
 		
 		}
 	}
 }
 
-void break_callback (bool pressed){
+static void break_callback (bool pressed){
 	if(pressed){
 		block_ray_actor(&break_block_action);
 	}
 }
-void place_callback (bool pressed){
+
+static void place_callback (bool pressed){
 	if(pressed){
 		block_ray_actor(&place_block_action);
 	}
 }
-void nextblock_callback (bool pressed){
+
+static void nextblock_callback (bool pressed){
 	if(pressed){
 		gst._selected_block++;
 		if(gst._selected_block >= BLOCK_TYPE_COUNT){
@@ -71,7 +73,7 @@ void nextblock_callback (bool pressed){
 		}
 	}
 }
-void prevblock_callback (bool pressed){
+static void prevblock_callback (bool pressed){
 	if(pressed){
 		gst._selected_block--;
 		if(gst._selected_block < 0){
@@ -80,88 +82,90 @@ void prevblock_callback (bool pressed){
 	}
 }
 
-void tt_selection () {
-	GLL_free(&state_stack);
-	GLL_add(&state_stack, &menu_input_state);
-	GLL_add(&state_stack, &world_render_state);
-	GLL_add(&state_stack, &debug_fps_pos_state);
-	GLL_add(&state_stack, &menu_overlay_state);
-		
-	xg_cursor_set(true, 132);
-		
-	xg_set_button1_callback (&menu_action_callback);
-	current_button_list = world_selection_button_list;
-}
-
-void transition_to_selection (){
+static void transition_to_selection (){
+	
+	void tt_selection () {
+		GLL_free(&state_stack);
+		GLL_add(&state_stack, &menu_input_state);
+		GLL_add(&state_stack, &world_render_state);
+		GLL_add(&state_stack, &debug_fps_pos_state);
+		GLL_add(&state_stack, &menu_overlay_state);
+			
+		xg_cursor_set(true, 132);
+			
+		xg_set_button1_callback (&menu_action_callback);
+		current_button_list = world_selection_button_list;
+	}
+	
 	GLL_add(&state_update_stack, &tt_selection);
 }
 
-void tt_main_menu () {
-	GLL_free(&state_stack);
-	GLL_add(&state_stack, &menu_input_state);
-	GLL_add(&state_stack, &world_render_state);
-	GLL_add(&state_stack, &debug_fps_pos_state);
-	GLL_add(&state_stack, &menu_overlay_state);
-		
-	xg_cursor_set(true, 132);
-		
-	xg_set_button1_callback (&menu_action_callback);
+static void transition_to_main_menu (){
 	
-	current_button_list = main_menu_button_list;
-}
-
-void transition_to_main_menu (){
+	void tt_main_menu () {
+		GLL_free(&state_stack);
+		GLL_add(&state_stack, &menu_input_state);
+		GLL_add(&state_stack, &world_render_state);
+		GLL_add(&state_stack, &debug_fps_pos_state);
+		GLL_add(&state_stack, &menu_overlay_state);
+			
+		xg_cursor_set(true, 132);
+			
+		xg_set_button1_callback (&menu_action_callback);
+		
+		current_button_list = main_menu_button_list;
+	}
+	
 	GLL_add(&state_update_stack, &tt_main_menu);
 }
 
-void tt_game () {
-	xg_set_button1_callback (&break_callback);
-	xg_set_button3_callback (&place_callback);
-	xg_set_button4_callback (&prevblock_callback);
-	xg_set_button5_callback (&nextblock_callback);
+static void continue_to_game (){
 	
-	xg_cursor_set(false, 0);
-	
-	GLL_free(&state_stack);
-	GLL_add(&state_stack, &world_input_state);
-	GLL_add(&state_stack, &world_render_state);
-	GLL_add(&state_stack, &debug_fps_pos_state);
-}
-
-void continue_to_game (){
-	GLL_add(&state_update_stack, &tt_game);
-}
-
-void tt_regen () {
-	
-	gst._player_x = 0.0f;
-	gst._player_y = 126.0f;
-	gst._player_z = 0.0f;
-	gst._p_chunk_x = 0;
-	gst._p_chunk_z = 0;
-	gst._angle_x = -0.5f;
-	gst._angle_y = 0.0f;
-	
-	srand(time(NULL));
-	seeded_noise_shuffle (rand());
-	delete_current_world();
-	set_world_name ("default");
-	
-	for(struct CLL_element* e = chunk_list[0].first; e != NULL; e = e->nxt){
-		e->data->initialized = false;
+	void tt_game () {
+		xg_set_button1_callback (&break_callback);
+		xg_set_button3_callback (&place_callback);
+		xg_set_button4_callback (&prevblock_callback);
+		xg_set_button5_callback (&nextblock_callback);
+		
+		xg_cursor_set(false, 0);
+		
+		GLL_free(&state_stack);
+		GLL_add(&state_stack, &world_input_state);
+		GLL_add(&state_stack, &world_render_state);
+		GLL_add(&state_stack, &world_overlay_state);
+		GLL_add(&state_stack, &debug_fps_pos_state);
 	}
-
-	// Generate the initial Chunks on the main thread
-	//run_chunk_generation_atprev();
-	struct chunkspace_position pos = {0,0};
-	// Generate the initial Chunks on the main thread
-	run_chunk_generation(&pos);
 	
 	GLL_add(&state_update_stack, &tt_game);
 }
 
-void transition_regen (){
+static void transition_regen (){
+	
+	void tt_regen () {
+		gst._player_x = 0.0f;
+		gst._player_y = 126.0f;
+		gst._player_z = 0.0f;
+		gst._p_chunk_x = 0;
+		gst._p_chunk_z = 0;
+		gst._angle_x = -0.5f;
+		gst._angle_y = 0.0f;
+		
+		srand(time(NULL));
+		seeded_noise_shuffle (rand());
+		delete_current_world();
+		set_world_name ("default");
+		
+		for(struct CLL_element* e = chunk_list[0].first; e != NULL; e = e->nxt){
+			e->data->initialized = false;
+		}
+
+		// Generate the initial Chunks on the main thread
+		//run_chunk_generation_atprev();
+		struct chunkspace_position pos = {0,0};
+		// Generate the initial Chunks on the main thread
+		run_chunk_generation(&pos);
+	}
+	
 	GLL_add(&state_update_stack, &tt_regen);
 }
 
@@ -457,7 +461,7 @@ void menu_overlay_state (float fTime){
 		struct button_t* bt = (struct button_t*)e->data;
 		if ( gst._mouse_x > bt->_x && gst._mouse_x < (bt->_x + bt->forg->width * CHARACTER_BASE_SIZE_X * bt->_scale) && gst._mouse_y > bt->_y && gst._mouse_y < ((bt->_y + bt->forg->height * CHARACTER_BASE_SIZE_Y * bt->_scale)) ){
 			drawtextpg(bt->backh, bt->_x, bt->_y, bt->_scale);
-			bt->highlighted_func();
+			bt->highlighted_func(bt);
 		} else {
 			drawtextpg(bt->backg, bt->_x, bt->_y, bt->_scale);
 		}
@@ -468,19 +472,30 @@ void menu_overlay_state (float fTime){
 	revertfont();
 }
 
+void world_overlay_state (float fTime){
+	
+	setupfont();
+	
+	drawstring(blockname_map[gst._selected_block], 0.0f, 2.0f - CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
+	
+	drawstring("+", 1.0f - 0.11f * CHARACTER_BASE_SIZE_X, 1.0f - 0.11f * CHARACTER_BASE_SIZE_Y, 0.22f);
+	
+	revertfont();
+	
+}
+
 void debug_fps_pos_state(float frameTime){
 	setupfont();
 	
 	char fps_txt [50];
 	setfont(gst._gfx_font);
-	drawstring("XCraft build-08/10/21", 0.0f, 0.0f, 0.44f);
+	drawstring("XCraft build-28/10/21", 0.0f, 0.0f, 0.44f);
 	sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
  	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 2, 0.44f);
 	sprintf(fps_txt, "YAW:%f, PITCH:%f", gst._angle_y, gst._angle_x);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f * 3, 0.44f);
-	drawstring(blockname_map[gst._selected_block], 0.0f, 2.0f - CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
 	
 	revertfont();
 }
@@ -537,20 +552,84 @@ void init_game () {
 	
 	glClearColor(gst._skycolor[0],gst._skycolor[1],gst._skycolor[2],gst._skycolor[3]);
 	
-	// Creating Main Menu Button List 
+	// Creating UI Button Lists
 	
-	float ccaligned ( char* s, float sc ) {return (1.0f - (strlen(s) + 2) * sc * CHARACTER_BASE_SIZE_X * 0.5f);}
+	inline float ccaligned ( char* s, float sc ) {return (1.0f - (strlen(s) + 2) * sc * CHARACTER_BASE_SIZE_X * 0.5f);}
+	
+	/*
+		Button List for the Main Menu:
+	 */
 	
 	main_menu_button_list = GLL_init();
-	GLL_add ( &main_menu_button_list, ui_create_button_fit ( ccaligned("XCraft", UI_TITLE_SCALE), 0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f, UI_TITLE_SCALE, BUTTON1_OFFSET, BUTTON1_OFFSET, "XCraft", &empty, &empty) );
-	GLL_add ( &main_menu_button_list, ui_create_button_fit ( ccaligned("Play", UI_SCALE), 1.0f, UI_SCALE, BUTTON6_OFFSET, BUTTON7_OFFSET, "Play", &empty, &transition_to_selection));
-	GLL_add ( &main_menu_button_list, ui_create_button_fit ( ccaligned("Quit", UI_SCALE), 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE, BUTTON4_OFFSET, BUTTON5_OFFSET, "Quit", &empty, &xg_window_stop) );
+	GLL_add ( &main_menu_button_list, 
+			  ui_create_button_fit (ccaligned("XCraft", UI_TITLE_SCALE), 
+									0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f,
+									UI_TITLE_SCALE, 
+									BUTTON1_OFFSET, 
+									BUTTON1_OFFSET, 
+									"XCraft",
+									&empty, 
+									&empty) );
+	GLL_add ( &main_menu_button_list, 
+			  ui_create_button_fit ( ccaligned("Play", UI_SCALE), 
+									 1.0f, 
+									UI_SCALE, 
+									BUTTON6_OFFSET, 
+									BUTTON7_OFFSET, 
+									"Play", 
+									&empty, 
+									&transition_to_selection));
+	GLL_add ( &main_menu_button_list, 
+			  ui_create_button_fit ( ccaligned("Quit", UI_SCALE), 
+									 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y, 
+									UI_SCALE, 
+									BUTTON4_OFFSET, 
+									BUTTON5_OFFSET, 
+									"Quit", 
+									&empty, 
+									&xg_window_stop) );
+	
+	/*
+		Button List for the "Play"-Submenu
+	 */
 	
 	world_selection_button_list = GLL_init();
-	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("XCraft", UI_TITLE_SCALE), 0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f, UI_TITLE_SCALE, BUTTON1_OFFSET, BUTTON1_OFFSET, "XCraft", &empty, &empty) );
-	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned(" Continue ", UI_SCALE), 1.0f, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, " Continue ", &empty, &continue_to_game));
-	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("Regenerate", UI_SCALE), 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, "Regenerate", &empty, &transition_regen) );
-	GLL_add ( &world_selection_button_list, ui_create_button_fit ( ccaligned("   Back   ", UI_SCALE), 1.0f + 6*UI_SCALE*CHARACTER_BASE_SIZE_Y, UI_SCALE, BUTTON2_OFFSET, BUTTON3_OFFSET, "   Back   ", &empty, &transition_to_main_menu) );
+	GLL_add ( &world_selection_button_list, 
+			  ui_create_button_fit ( ccaligned("XCraft", UI_TITLE_SCALE), 
+									 0.5f - 3 * UI_TITLE_SCALE * CHARACTER_BASE_SIZE_Y * 0.5f, 
+									UI_TITLE_SCALE, 
+									BUTTON1_OFFSET, 
+									BUTTON1_OFFSET, 
+									"XCraft", 
+									&empty, 
+									&empty) );
+	GLL_add ( &world_selection_button_list, 
+			  ui_create_button_fit ( ccaligned(" Continue ", UI_SCALE), 
+									 1.0f,
+									UI_SCALE, 
+									BUTTON2_OFFSET,
+									BUTTON3_OFFSET, 
+									" Continue ", 
+									&empty, 
+									&continue_to_game));
+	GLL_add ( &world_selection_button_list, 
+			  ui_create_button_fit ( ccaligned("Regenerate", UI_SCALE),
+									 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y,
+									UI_SCALE,
+									BUTTON2_OFFSET,
+									BUTTON3_OFFSET,
+									"Regenerate",
+									&empty,
+									&transition_regen) );
+	GLL_add ( &world_selection_button_list, 
+			  ui_create_button_fit ( ccaligned("   Back   ", UI_SCALE), 
+									 1.0f + 6*UI_SCALE*CHARACTER_BASE_SIZE_Y,
+									UI_SCALE,
+									BUTTON2_OFFSET,
+									BUTTON3_OFFSET,
+									"   Back   ",
+									&empty,
+									&transition_to_main_menu) );
 	
 	state_stack = GLL_init();
 	state_update_stack = GLL_init();
@@ -559,12 +638,15 @@ void init_game () {
 	
 }
 
+
 void exit_game () {
 	
 	dump_player_data();
-	
-	GLL_free_rec (&main_menu_button_list);
-	GLL_free_rec (&world_selection_button_list);
+
+	GLL_free_rec_btn (&main_menu_button_list);
+	GLL_destroy (&main_menu_button_list);
+	GLL_free_rec_btn (&world_selection_button_list);
+	GLL_destroy(&world_selection_button_list);
 	GLL_free (&state_stack); 
 	GLL_destroy(&state_stack);
 	GLL_free (&state_update_stack); 

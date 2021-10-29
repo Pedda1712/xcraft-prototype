@@ -62,18 +62,19 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 	}
 	(*calc_func)(&calc_list);
 	
-	struct sync_chunk_t* cpy = CLL_getDataAt(&calc_list ,for_chunk->_x, for_chunk->_z);
-	if(cpy != NULL){ // Should never fail+
-		if(override){
-			memcpy(for_chunk->light.block_data, cpy->light.block_data, CHUNK_MEM); // Copy from temp to actual light buffer
-		}else{
-			for(int i = 0; i < CHUNK_MEM; i++){
-				if(for_chunk->light.block_data[i] < cpy->light.block_data[i]){
-					for_chunk->light.block_data[i] = cpy->light.block_data[i];
+	
+	for(p = calc_list.first; p != NULL; p = p->nxt){ // Copy over Light Data
+		struct sync_chunk_t* cpy = CLL_getDataAt(&chunk_list[0] ,p->data->_x, p->data->_z);
+		if(cpy != NULL)
+			if(override){
+				memcpy(cpy->light.block_data, p->data->light.block_data, CHUNK_MEM); // Copy from temp to actual light buffer
+			}else{
+				for(int i = 0; i < CHUNK_MEM; i++){
+					if(cpy->light.block_data[i] < p->data->light.block_data[i]){
+						cpy->light.block_data[i] = p->data->light.block_data[i];
+					}
 				}
 			}
-		}
-			
 	}
 	
 	for(p = calc_list.first; p != NULL; p = p->nxt){ // delete temporary lightlist copies
@@ -86,9 +87,9 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 	
 }
 
-void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int z, uint8_t llevel, bool fromup, struct CLL* calc_list){
 
-	
+static void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int z, uint8_t llevel, bool fromup, struct CLL* calc_list){
+
 	if (llevel == MIN_LIGHT) return;
 	if (sct->light.block_data[ATBLOCK(x, y, z)] > llevel) return;
 	if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel && !fromup) return;
@@ -171,13 +172,14 @@ void skylight_func (struct CLL* calc_list){
 		int y = CHUNK_SIZE_Y - 1;
 		for (int x = 0; x < CHUNK_SIZE; x++){
 			for(int z = 0; z < CHUNK_SIZE; z++){
+
 				rec_skylight_func_sides(p->data, x, y, z, MAX_LIGHT, true, calc_list);
 			}
 		}
 	}
 }
 
-void rec_blocklight_func (struct sync_chunk_t* sct, int x, int y, int z, uint8_t llevel, struct CLL* calc_list){
+static void rec_blocklight_func (struct sync_chunk_t* sct, int x, int y, int z, uint8_t llevel, struct CLL* calc_list){
 
 	if (llevel == MIN_LIGHT) return;
 	if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel) return;

@@ -55,7 +55,7 @@ GLuint loadfont (char* fn, GLint font_filter){
 	return font_texture;
 }
 
-void drawchar (char c, float x, float y, float scale){
+static void drawchar (char c, float x, float y, float scale){
 	x = (x * 2) - 1.0f;
 	y = ((1.0f - y) * 2) - 1.0f;
 	
@@ -104,6 +104,7 @@ void setupfont (){
 	glLoadIdentity();
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+	
 }
 
 void revertfont (){

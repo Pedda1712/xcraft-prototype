@@ -12,6 +12,7 @@
 #include <stdint.h>
 
 #include <bmpfont.h>
+#include <genericlist.h>
 
 #define UI_SCALE 0.44f
 #define UI_TITLE_SCALE 1.32f
@@ -23,13 +24,15 @@ struct button_t {
 	struct paragraph_t* backg;
 	struct paragraph_t* backh;
 	struct paragraph_t* forg;
-	void (*highlighted_func) (void);
-	void (*clicked_func) (void);
+	void (*highlighted_func) (struct button_t*);
+	void (*clicked_func) (struct button_t*);
 };
 
-struct button_t* ui_create_button (int width, int height, float x, float y, float scale, uint8_t BACKGROUND, uint8_t BACKGROUND_HIGHLIGHTED, char* b_str, void (*h)(void), void (*c)(void));
+void GLL_free_rec_btn (struct GLL* gll);
 
-struct button_t* ui_create_button_fit (float x, float y, float scale, uint8_t BACKGROUND, uint8_t BACKGROUND_HIGHLIGHTED, char* b_str, void (*h)(void), void (*c)(void));
+struct button_t* ui_create_button (int width, int height, float x, float y, float scale, uint8_t BACKGROUND, uint8_t BACKGROUND_HIGHLIGHTED, char* b_str, void (*h)(struct button_t*), void (*c)(struct button_t*));
+
+struct button_t* ui_create_button_fit (float x, float y, float scale, uint8_t BACKGROUND, uint8_t BACKGROUND_HIGHLIGHTED, char* b_str, void (*h)(struct button_t*), void (*c)(struct button_t*));
 
 void ui_destroy_button (struct button_t* b);
 
