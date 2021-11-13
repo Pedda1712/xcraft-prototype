@@ -23,17 +23,21 @@ set (CLIENT_SOURCES
 	${CMAKE_SOURCE_DIR}/src/genericlist.c
 	${CMAKE_SOURCE_DIR}/src/worldsave.c
 	${CMAKE_SOURCE_DIR}/src/shader.c
+	${CMAKE_SOURCE_DIR}/src/raycast.c
 )
 
 set (STRUCED_SOURCES
 	${CMAKE_SOURCE_DIR}/src/struced/main.c
 	${CMAKE_SOURCE_DIR}/src/struced/appstate.c
-	
+	${CMAKE_SOURCE_DIR}/src/struced/octree.c
+	${CMAKE_SOURCE_DIR}/src/struced/clicktool.c
+
 	${CMAKE_SOURCE_DIR}/src/bmp24.c
 	${CMAKE_SOURCE_DIR}/src/bmpfont.c
 	${CMAKE_SOURCE_DIR}/src/genericlist.c
 	${CMAKE_SOURCE_DIR}/src/ui.c
 	${CMAKE_SOURCE_DIR}/src/blocktexturedef.c
+	${CMAKE_SOURCE_DIR}/src/raycast.c
 )
 
 add_executable(xcraft ${CLIENT_SOURCES})

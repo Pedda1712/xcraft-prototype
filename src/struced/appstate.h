@@ -13,8 +13,14 @@ extern struct appstate_info_t {
 	bool _current_mouse_status;
 	float _camera_pos [2];
 	float _camera_rad;
+	float _fov;
 	uint8_t _selected_block;
+	int32_t _placed_blocks;
+	void (*_left_click_callback)(bool, float, float);
+	void (*_right_click_callback)(bool, float, float);
 } ast;
+
+extern struct OCT_node_t* block_tree;
 
 extern struct GLL app_state_stack;
 extern struct GLL app_state_modifier_stack;

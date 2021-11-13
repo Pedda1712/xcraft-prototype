@@ -2,7 +2,7 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 12
+#define WORLD_RANGE 10
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
@@ -33,7 +33,7 @@
 #define WATER_B  5
 #define LIGHT_B  6
 #define SGRASS_B 7
-#define SNOW_B   8   
+#define SNOW_B   8
 #define XGRASS_B 9
 #define XGRAST_B 10
 #define XFLOW1_B 11
@@ -71,7 +71,7 @@ struct chunk_t {
 struct sync_chunk_t {
 	int32_t _x;
 	int32_t _z;
-	
+
 	/*
 	 * data: all blocks EXCEPT water AND plants
 	 * data_unique: all blocks INCLUDING water AND plants // weird solution, but was easy to implement with existing code :P
@@ -80,18 +80,18 @@ struct sync_chunk_t {
 	struct chunk_t data;
 	struct chunk_t data_unique;
 	struct chunk_t light;
-	
+
 	bool updatemesh;
 	bool vbo_update[MESH_LEVELS/2];
 	uint32_t mesh_vbo [MESH_LEVELS/2];
 	uint32_t verts [MESH_LEVELS/2];
 	struct DFA mesh_buffer[MESH_LEVELS];
-	
+
 	/*
 		List of all Light-Emitting Blocks
 	 */
 	struct GLL lightlist;
-	
+
 	pthread_mutex_t c_mutex;
 	bool initialized;
 };
