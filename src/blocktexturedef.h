@@ -14,6 +14,8 @@ struct blocktexdef_t {
 		
 	 */
 	uint8_t index [6];
+	uint8_t flag_register; // see worlddefs.h>
+	uint16_t complete_id;
 };
 
 extern struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT];

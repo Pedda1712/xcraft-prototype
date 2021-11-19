@@ -14,8 +14,8 @@
 #include <bmpfont.h>
 #include <genericlist.h>
 
-#define UI_SCALE 0.44f
-#define UI_TITLE_SCALE 1.32f
+#define UI_SCALE 0.66f
+#define UI_TITLE_SCALE 1.8f
 
 struct button_t {
 	float _x;

@@ -1,4 +1,7 @@
 #include <struced/octree.h>
+#include <blocktexturedef.h>
+
+#include <GL/gl.h>
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -162,3 +165,109 @@ int OCT_count_levels (struct OCT_node_t* node){
 	return 1 + maxlower;
 
 }
+
+void OCT_operator_gl_draw (struct OCT_node_t* n){
+
+			struct blocktexdef_t tex = btd_map[BLOCK_ID(n->data->_type)];
+
+			float get_texX (uint8_t ind) {return ((ind * 16) % 256) / 256.0f;}
+			float get_texY (uint8_t ind) {return (ind / 16) * (1.f/16.0f);}
+
+			float ctx, cty;
+
+
+			ctx = get_texX (tex.index[0]); cty = get_texY (tex.index[0]);
+			
+			if(!IS_X(n->data->_type)){
+				glBegin (GL_QUADS);
+				glTexCoord2f (ctx, cty);
+				glVertex3f(0.0f + n->data->_x, 0.0f + n->data->_y, 0.0f + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty);
+				glVertex3f(1.0f + n->data->_x, 0.0f + n->data->_y, 0.0f + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty + 1.f/16.f);
+				glVertex3f(1.0f + n->data->_x, 0.0f + n->data->_y, 1.0f + n->data->_z);
+				glTexCoord2f (ctx, cty + 1.f/16.f);
+				glVertex3f(0.0f + n->data->_x, 0.0f + n->data->_y, 1.0f + n->data->_z);
+
+				ctx = get_texX (tex.index[1]); cty = get_texY (tex.index[1]);
+				glTexCoord2f (ctx, cty);
+				glVertex3f(0.0f + n->data->_x, 1.0f + n->data->_y, 0.0f + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty);
+				glVertex3f(1.0f + n->data->_x, 1.0f + n->data->_y, 0.0f + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty + 1.f/16.f);
+				glVertex3f(1.0f + n->data->_x, 1.0f + n->data->_y, 1.0f + n->data->_z);
+				glTexCoord2f (ctx, cty + 1.f/16.f);
+				glVertex3f(0.0f + n->data->_x, 1.0f + n->data->_y, 1.0f + n->data->_z);
+
+				ctx = get_texX (tex.index[2]); cty = get_texY (tex.index[2]);
+				glTexCoord2f (ctx, cty + 1.f/16.f);
+				glVertex3f(0.0f + n->data->_x,0.0f  + n->data->_y,0.0f  + n->data->_z);
+				glTexCoord2f (ctx, cty);
+				glVertex3f(0.0f + n->data->_x,1.0f  + n->data->_y,0.0f  + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty);
+				glVertex3f(0.0f + n->data->_x,1.0f  + n->data->_y,1.0f  + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty + 1.f/16.f);
+				glVertex3f(0.0f + n->data->_x,0.0f  + n->data->_y,1.0f  + n->data->_z);
+
+				ctx = get_texX (tex.index[3]); cty = get_texY (tex.index[3]);
+				glTexCoord2f (ctx, cty + 1.f/16.f);
+				glVertex3f(1.0f + n->data->_x,0.0f  + n->data->_y,0.0f  + n->data->_z);
+				glTexCoord2f (ctx, cty);
+				glVertex3f(1.0f + n->data->_x,1.0f  + n->data->_y,0.0f  + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty);
+				glVertex3f(1.0f + n->data->_x,1.0f  + n->data->_y,1.0f  + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty + 1.f/16.f);
+				glVertex3f(1.0f + n->data->_x,0.0f  + n->data->_y,1.0f  + n->data->_z);
+
+				ctx = get_texX (tex.index[4]); cty = get_texY (tex.index[4]);
+				glTexCoord2f (ctx + 1.f/16.f, cty + 1.f/16.f);
+				glVertex3f(0.0f + n->data->_x,0.0f  + n->data->_y,0.0f  + n->data->_z);
+				glTexCoord2f (ctx, cty + 1.f/16.f);
+				glVertex3f(1.0f + n->data->_x,0.0f  + n->data->_y,0.0f  + n->data->_z);
+				glTexCoord2f (ctx, cty);
+				glVertex3f(1.0f + n->data->_x,1.0f  + n->data->_y,0.0f  + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty);
+				glVertex3f(0.0f + n->data->_x,1.0f  + n->data->_y,0.0f  + n->data->_z);
+
+				ctx = get_texX (tex.index[5]); cty = get_texY (tex.index[5]);
+				glTexCoord2f (ctx + 1.f/16.f, cty + 1.f/16.f);
+				glVertex3f(0.0f + n->data->_x,0.0f  + n->data->_y,1.0f  + n->data->_z);
+				glTexCoord2f (ctx, cty + 1.f/16.f);
+				glVertex3f(1.0f + n->data->_x,0.0f  + n->data->_y,1.0f  + n->data->_z);
+				glTexCoord2f (ctx, cty);
+				glVertex3f(1.0f + n->data->_x,1.0f  + n->data->_y,1.0f  + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty);
+				glVertex3f(0.0f + n->data->_x,1.0f  + n->data->_y,1.0f  + n->data->_z);
+				glEnd();
+			}else{
+				
+				glEnable(GL_ALPHA_TEST);
+				glAlphaFunc(GL_EQUAL, 1);
+				
+				glBegin (GL_QUADS);
+				glTexCoord2f (ctx + 1.f/16.f, cty + 1.f/16.f);
+				glVertex3f(0.0f + n->data->_x, 0.0f + n->data->_y, 0.0f + n->data->_z);
+				glTexCoord2f (ctx, cty + 1.f/16.f);
+				glVertex3f(1.0f + n->data->_x, 0.0f + n->data->_y, 1.0f + n->data->_z);
+				glTexCoord2f (ctx, cty);
+				glVertex3f(1.0f + n->data->_x, 1.0f + n->data->_y, 1.0f + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty);
+				glVertex3f(0.0f + n->data->_x, 1.0f + n->data->_y, 0.0f + n->data->_z);
+
+				ctx = get_texX (tex.index[1]); cty = get_texY (tex.index[1]);
+				glTexCoord2f (ctx, cty);
+				glVertex3f(1.0f + n->data->_x, 1.0f + n->data->_y, 0.0f + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty);
+				glVertex3f(0.0f + n->data->_x, 1.0f + n->data->_y, 1.0f + n->data->_z);
+				glTexCoord2f (ctx + 1.f/16.f, cty + 1.f/16.f);
+				glVertex3f(0.0f + n->data->_x, 0.0f + n->data->_y, 1.0f + n->data->_z);
+				glTexCoord2f (ctx, cty + 1.f/16.f);
+				glVertex3f(1.0f + n->data->_x, 0.0f + n->data->_y, 0.0f + n->data->_z);
+				glEnd();
+				
+				glDisable(GL_ALPHA_TEST);
+			}
+
+			
+
+		}

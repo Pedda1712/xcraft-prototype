@@ -1,6 +1,7 @@
 #ifndef APPSTATE
 #define APPSTATE
 
+#include <struced/octree.h>
 #include <genericlist.h>
 #include <blocktexturedef.h>
 
@@ -18,6 +19,9 @@ extern struct appstate_info_t {
 	int32_t _placed_blocks;
 	void (*_left_click_callback)(bool, float, float);
 	void (*_right_click_callback)(bool, float, float);
+	struct GLL _highlight_list;
+	int _scroll_radius;
+	uint8_t _click_shape;
 } ast;
 
 extern struct OCT_node_t* block_tree;
@@ -27,8 +31,13 @@ extern struct GLL app_state_modifier_stack;
 
 void app_overlay_draw_state     (float);
 void app_editor_draw_state      (float);
+void app_selection_draw_state   (float);
 void app_input_state            (float);
 void app_text_input_state       (float);
+
+void octree_draw_operator (struct OCT_node_t*);
+void add_block_octree (struct block_t n_block);
+void rem_block_octree (struct block_t n_block);
 
 void init_app_state_system ();
 void exit_app_state_system ();

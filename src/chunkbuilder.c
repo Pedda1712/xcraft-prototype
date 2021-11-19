@@ -117,20 +117,20 @@ static void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, ui
 	}
 }
 
-static void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t block_t, uint8_t offset, uint8_t* bor, uint8_t lightlevel, bool n_logic, uint8_t comp){
+static void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t block_t, uint8_t offset, uint16_t* bor, uint8_t lightlevel, bool n_logic, uint8_t comp){
 	
 	float lightmul = (float)lightlevel / (float)MAX_LIGHT;
 	
 	float y_offset = WATER_SURFACE_OFFSET;
 	
-	bool xp = (bor[0] == comp);
-	bool xm = (bor[1] == comp);
-	bool zp = (bor[2] == comp);
-	bool zm = (bor[3] == comp);
-	bool xpzp = (bor[4] == comp);
-	bool xpzm = (bor[5] == comp);
-	bool xmzp = (bor[6] == comp);
-	bool xmzm = (bor[7] == comp);
+	bool xp = (BLOCK_ID(bor[0]) == comp);
+	bool xm = (BLOCK_ID(bor[1]) == comp);
+	bool zp = (BLOCK_ID(bor[2]) == comp);
+	bool zm = (BLOCK_ID(bor[3]) == comp);
+	bool xpzp = (BLOCK_ID(bor[4]) == comp);
+	bool xpzm = (BLOCK_ID(bor[5]) == comp);
+	bool xmzp = (BLOCK_ID(bor[6]) == comp);
+	bool xmzm = (BLOCK_ID(bor[7]) == comp);
 	
 	float vertex_coordinates [12];
 	float tex_coordinates [8];
@@ -169,12 +169,12 @@ static void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float
 	}
 }
 
-static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
+static void water_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
 	
 	int chunk_x = in->_x;
 	int chunk_z = in->_z;
 	
-	uint8_t border_block_type [8];
+	uint16_t border_block_type [8];
 	void load_borders (int x, int y, int z){ // This method gets the bordering blocks of the block at x,y,z (including corner pieces) 
 				
 		bool xc_p, xc_m, zc_p, zc_m;
@@ -183,7 +183,7 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 		zc_p = (z+1 >= CHUNK_SIZE);
 		zc_m = (z-1 < 0);
 		
-		uint8_t block_type = 0;
+		uint16_t block_type = 0;
 
 		if(xc_p){
 			if(neighbour_data[0] != NULL)
@@ -312,15 +312,13 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 	}
 	
 	bool is_shortened (int x, int y, int z){
-		if(m_level == 1){
-			if(y + 1 > CHUNK_SIZE_Y){
-				return true;
+		if(y + 1 > CHUNK_SIZE_Y){
+			return true;
+		}else{
+			if(BLOCK_ID(data->block_data[ATBLOCK(x, y+1, z)]) == WATER_B){
+				return false;
 			}else{
-				if(data->block_data[ATBLOCK(x, y+1, z)] == WATER_B){
-					return false;
-				}else{
-					return true;
-				}
+				return true;
 			}
 		}
 		return false;
@@ -334,19 +332,9 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 		for(int y = 0; y < CHUNK_SIZE_Y;++y){
 			for(int z = 0; z < CHUNK_SIZE;++z){
 				
-				uint8_t block_t = data->block_data[ATBLOCK(x,y,z)]; // The Block Type at the current position
+				uint8_t block_t = BLOCK_ID(data->block_data[ATBLOCK(x,y,z)]); // The Block Type at the current position
 				
-				bool emitter_cond; // Depending on the target, the condition for spawning a block face may vary
-				switch(m_level){
-					case 1: {
-						emitter_cond = block_t == WATER_B; // Only data_unique Blocks can spawn faces
-						break;
-					}
-					default: {
-						emitter_cond = block_t != 0; // Any Non-Air Block can spawn faces
-						break;
-					}
-				}
+				bool emitter_cond = IS_TRANS(data->block_data[ATBLOCK(x,y,z)]); // Only Transparent Blocks can spawn faces
 				
 				if (emitter_cond){
 					float wx,wy,wz; // The World-Space Position
@@ -357,25 +345,16 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 					bool shortened_block = is_shortened (x, y, z); // Determine if the top side of the block is shifted down
 					
 					if(!((y + 1) == CHUNK_SIZE_Y)){
-						if(data->block_data[ATBLOCK(x,y+1,z)] == AIR_B){
-							if(m_level != 1){
-								emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)]);
-							}else{
-								load_borders (x, y+1, z);
-								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)], true, WATER_B);
-							}
-						}else if (data->block_data[ATBLOCK(x,y+1,z)] != WATER_B){ // Special Case for water only
-							if(m_level == 1){
-								load_borders (x, y+1, z);
-								emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)], false, AIR_B);
-							}
+						if(!IS_TRANS(data->block_data[ATBLOCK(x,y+1,z)])){
+							load_borders (x, y+1, z);
+							emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)], true, WATER_B);
 						}
 					}else{
 						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT);
 					}
 					
 					if(!((y - 1) < 0)){
-						if(data->block_data[ATBLOCK(x,y-1,z)] == 0){
+						if(!IS_TRANS(data->block_data[ATBLOCK(x,y-1,z)])){
 							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)]);
 						}
 					}else{
@@ -383,47 +362,141 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 					}
 					
 					if(!((x + 1) == CHUNK_SIZE)){
-						if(data->block_data[ATBLOCK(x+1,y,z)] == 0){
+						if(!IS_TRANS(data->block_data[ATBLOCK(x+1,y,z)])){
 							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)]);
 						}
 					}else{
 						if(neighbour_data[0] != NULL)
-							if(neighbour_data[0]->block_data[ATBLOCK(0,y,z)] == 0){
+							if(!IS_TRANS(neighbour_data[0]->block_data[ATBLOCK(0,y,z)])){
 								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)]);
 							}
 					}
 					
 					if(!((x - 1) < 0)){
-						if(data->block_data[ATBLOCK(x-1,y,z)] == 0){
+						if(!IS_TRANS(data->block_data[ATBLOCK(x-1,y,z)])){
 							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)]);
 						}
 					}else{
 						if(neighbour_data[1] != NULL){
-							if(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)] == 0){
+							if(!IS_TRANS(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)])){
 								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)]);
 							}
 						}
 					}
 					
 					if(!((z + 1) == CHUNK_SIZE)){
-						if(data->block_data[ATBLOCK(x,y,z+1)] == 0){
+						if(!IS_TRANS(data->block_data[ATBLOCK(x,y,z+1)])){
 							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)]);
 						}
 					}else{
 						if(neighbour_data[2] != NULL){
-							if(neighbour_data[2]->block_data[ATBLOCK(x,y,0)] == 0){
+							if(!IS_TRANS(neighbour_data[2]->block_data[ATBLOCK(x,y,0)])){
 								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)]);
 							}
 						}
 					}
 					
 					if(!((z - 1) < 0)){
-						if(data->block_data[ATBLOCK(x,y,z-1)] == 0){
+						if(!IS_TRANS(data->block_data[ATBLOCK(x,y,z-1)])){
 							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)]);
 						}
 					}else{
 						if(neighbour_data[3] != NULL){
-							if(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)] == 0){
+							if(!IS_TRANS(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)])){
+								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)]);
+							}
+						}
+					}
+				}
+				
+			}
+		}
+	}
+}
+
+static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
+	
+	int chunk_x = in->_x;
+	int chunk_z = in->_z;
+	
+	// Chunk Offset Coordinates (Are Used to Calculate the World Position of each Block)
+	float c_x_off = (float)chunk_x - 0.5f;
+	float c_z_off = (float)chunk_z - 0.5f;
+	
+	for(int x = 0; x < CHUNK_SIZE;++x){
+		for(int y = 0; y < CHUNK_SIZE_Y;++y){
+			for(int z = 0; z < CHUNK_SIZE;++z){
+				
+				uint8_t block_t = BLOCK_ID(data->block_data[ATBLOCK(x,y,z)]); // The Block Type at the current position
+				
+				bool emitter_cond = IS_SOLID(data->block_data[ATBLOCK(x,y,z)]); // Any Non-Air Block can spawn faces
+				
+				if (emitter_cond){
+					float wx,wy,wz; // The World-Space Position
+					wx = (x + c_x_off * CHUNK_SIZE) * BLOCK_SIZE;
+					wz = (z + c_z_off * CHUNK_SIZE) * BLOCK_SIZE;
+					wy = y * BLOCK_SIZE;
+					
+					bool shortened_block = false; // Determine if the top side of the block is shifted down
+					
+					if(!((y + 1) == CHUNK_SIZE_Y)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x,y+1,z)])){
+							emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)]);
+						}
+					}else{
+						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT);
+					}
+					
+					if(!((y - 1) < 0)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x,y-1,z)])){
+							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)]);
+						}
+					}else{
+						//emit_face(in, wx, wy, wz, Y_AXIS, false, block_t);
+					}
+					
+					if(!((x + 1) == CHUNK_SIZE)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x+1,y,z)])){
+							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)]);
+						}
+					}else{
+						if(neighbour_data[0] != NULL)
+							if(!IS_SOLID(neighbour_data[0]->block_data[ATBLOCK(0,y,z)])){
+								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)]);
+							}
+					}
+					
+					if(!((x - 1) < 0)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x-1,y,z)])){
+							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)]);
+						}
+					}else{
+						if(neighbour_data[1] != NULL){
+							if(!IS_SOLID(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)])){
+								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)]);
+							}
+						}
+					}
+					
+					if(!((z + 1) == CHUNK_SIZE)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x,y,z+1)])){
+							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)]);
+						}
+					}else{
+						if(neighbour_data[2] != NULL){
+							if(!IS_SOLID(neighbour_data[2]->block_data[ATBLOCK(x,y,0)])){
+								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)]);
+							}
+						}
+					}
+					
+					if(!((z - 1) < 0)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x,y,z-1)])){
+							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)]);
+						}
+					}else{
+						if(neighbour_data[3] != NULL){
+							if(!IS_SOLID(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)])){
 								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)]);
 							}
 						}
@@ -492,10 +565,9 @@ static void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, s
 				wz = (z + c_z_off * CHUNK_SIZE) * BLOCK_SIZE;
 				wy = y * BLOCK_SIZE;
 				
-				uint8_t block_t = data->block_data[ATBLOCK(x,y,z)]; // The Block Type at the current position
-				
-				if(block_t >= XGRASS_B && block_t <= XFLOW6_B){
-					emit_x(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, false, in->light.block_data[ATBLOCK(x,y,z)]);
+				uint16_t block_t = data->block_data[ATBLOCK(x,y,z)]; // The Block Type at the current position
+				if(IS_X(block_t)){
+					emit_x(in, wx, wy, wz, Y_AXIS, true, BLOCK_ID(block_t), emit_offset, false, in->light.block_data[ATBLOCK(x,y,z)]);
 				}
 			}
 		}
@@ -518,7 +590,7 @@ static void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level, void (*r
 	7->the chunk in -X-Z direction (or NULL)
 	*/
 	
-	struct sync_chunk_t* neighbours [8];
+	struct sync_chunk_t* neighbours [8]; // this is dangerous, these chunks arent synced, might lead to weird artifacts
 	neighbours[0] = CLL_getDataAt(&chunk_list[0], chunk_x + 1, chunk_z);
 	neighbours[1] = CLL_getDataAt(&chunk_list[0], chunk_x - 1, chunk_z);
 	neighbours[2] = CLL_getDataAt(&chunk_list[0], chunk_x, chunk_z + 1);
@@ -532,31 +604,16 @@ static void build_chunk_mesh (struct sync_chunk_t* in, uint8_t m_level, void (*r
 	struct chunk_t* neighbour_data [8]; // also varies depending on target
 	uint8_t emit_offset; // Which mesh to write into (the target mesh)
 	
-	switch (m_level){
-
-		case 0: {
-			data = &in->data;
-			for(int i = 0; i < 8; ++i){
-				if(neighbours[i] != NULL){
-					neighbour_data[i] = &neighbours[i]->data;
-				} else{
-					neighbour_data[i] = NULL;
-				}
-			}
-			break;
-		}
-		default: {
-			data = &in->data_unique;
-			for(int i = 0; i < 8; ++i){
-				if(neighbours[i] != NULL){
-					neighbour_data[i] = &neighbours[i]->data_unique;
-				}else{
-					neighbour_data[i] = NULL;
-				}
-			}
-			break;
+	
+	data = &in->data_unique;
+	for(int i = 0; i < 8; ++i){
+		if(neighbours[i] != NULL){
+			neighbour_data[i] = &neighbours[i]->data_unique;
+		}else{
+			neighbour_data[i] = NULL;
 		}
 	}
+	
 	
 	emit_offset = m_level;
 	emit_offset = emit_offset * 2 + !in->updatemesh;
@@ -578,7 +635,7 @@ void do_updates_for_list (struct CLL* list){
 		calculate_light(p->data, &blocklight_func, false);
 		
 		build_chunk_mesh(p->data, 0, &standard_mesh_routine); // Build Block Mesh
-		build_chunk_mesh(p->data, 1, &standard_mesh_routine); // Build Water Mesh
+		build_chunk_mesh(p->data, 1, &water_mesh_routine); // Build Water Mesh
 		build_chunk_mesh(p->data, 2, &plant_mesh_routine); // Build Plant Mesh
 		
 		p->data->updatemesh = !p->data->updatemesh;

@@ -26,5 +26,6 @@ void GLL_destroy (struct GLL* gll);
 
 void GLL_lock ( struct GLL* gll );
 void GLL_unlock ( struct GLL* gll );
+void GLL_operation (struct GLL* gll, void (*operator)(struct GLL_element*));
 
 #endif

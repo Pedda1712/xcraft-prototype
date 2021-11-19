@@ -5,6 +5,7 @@
 #include <lightcalc.h>
 #include <worldsave.h>
 #include <genericlist.h>
+#include <blocktexturedef.h>
 
 #include <pthread.h>
 
@@ -121,7 +122,6 @@ void generate_chunk_data () {
 	for(p = chunk_list[2].first; p != NULL; p = p->nxt){
 		chunk_data_sync(p->data);
 		
-		memset(p->data->data.block_data, 0, CHUNK_MEM);
 		memset(p->data->data_unique.block_data, 0, CHUNK_MEM);
 		memset(p->data->light.block_data, 0, CHUNK_MEM);
 		
@@ -138,10 +138,10 @@ void generate_chunk_data () {
 					bool under_sky = true;
 					int depth_below = 0;
 					
-					uint8_t top_layer_block = SNOW_B; //Grass
-					uint8_t sec_layer_block = SNOW_B;  //Dirt 
-					uint8_t thr_layer_block = STONE_B; //Stone
-					uint8_t liquid_layer    = WATER_B; //data_unique
+					uint16_t top_layer_block = btd_map[SNOW_B].complete_id; //Grass
+					uint16_t sec_layer_block = btd_map[SNOW_B].complete_id;  //Dirt 
+					uint16_t thr_layer_block = btd_map[STONE_B].complete_id; //Stone
+					uint16_t liquid_layer    = btd_map[WATER_B].complete_id; //data_unique
 					
 					float ocean_modif = (noise((cx + x * CHUNK_SIZE) * 0.005f, 0, (cz + z * CHUNK_SIZE) * 0.005f)) * 0.5f + (noise((cx + x * CHUNK_SIZE) * 0.00125f, 0, (cz + z * CHUNK_SIZE) * 0.00125f)) * 0.5f;
 					ocean_modif-=0.05125f;
@@ -169,37 +169,34 @@ void generate_chunk_data () {
 					for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
 						
 						if( cy < SNOW_LEVEL + lake_modif * 16){
-							top_layer_block = SGRASS_B;
-							sec_layer_block = DIRT_B;
+							top_layer_block = btd_map[SGRASS_B].complete_id;
+							sec_layer_block = btd_map[DIRT_B].complete_id;
 						}
 						if( cy < SGRASS_LEVEL + lake_modif * 16){
-							top_layer_block = GRASS_B;
-							sec_layer_block = DIRT_B;
+							top_layer_block = btd_map[GRASS_B].complete_id;
+							sec_layer_block = btd_map[DIRT_B].complete_id;
 						}
 						
 						if( cy < WATER_LEVEL + 1){
-							top_layer_block = GRAVEL_B; //Gravel
-							sec_layer_block = GRAVEL_B; //Gravel
+							top_layer_block = btd_map[GRAVEL_B].complete_id; //Gravel
+							sec_layer_block = btd_map[GRAVEL_B].complete_id; //Gravel
 						}
 						
 						if( block_noise((cx + x * CHUNK_SIZE), (cy), (cz + z * CHUNK_SIZE), slope_modifier, median_f) > 0){
 							if(!under_sky){
 								if(depth_below < 3){
-									p->data->data.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
 									p->data->data_unique.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;
 									depth_below++;
 								}
 								else{
-									p->data->data.block_data[ATBLOCK(cx,cy,cz)] = thr_layer_block;
 									p->data->data_unique.block_data[ATBLOCK(cx,cy,cz)] = thr_layer_block;
 								}
 							}else{
-								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = top_layer_block;
 								p->data->data_unique.block_data[ATBLOCK(cx,cy,cz)] = top_layer_block;
 								
-								if((top_layer_block == GRASS_B || top_layer_block == SGRASS_B) && cy < CHUNK_SIZE_Y - 1 && ngrass_modif > 0.0f){
+								if((BLOCK_ID(top_layer_block) == GRASS_B || BLOCK_ID(top_layer_block) == SGRASS_B) && cy < CHUNK_SIZE_Y - 1 && ngrass_modif > 0.0f){
 									
-									uint8_t grass_type = (grass_modif > 0.0f) ? XGRASS_B : XGRAST_B;
+									uint16_t grass_type = (grass_modif > 0.0f) ? btd_map[XGRASS_B].complete_id : btd_map[XGRAST_B].complete_id;
 									
 									if(nflow_modif > 0.28f){
 										grass_type += (flow_modif > -0.75f) ? 2 : 0;
@@ -214,8 +211,7 @@ void generate_chunk_data () {
 							}
 						}else{
 							if(cy == 0){
-								p->data->data.block_data[ATBLOCK(cx,cy,cz)] = GRAVEL_B;
-								p->data->data_unique.block_data[ATBLOCK(cx,cy,cz)] = GRAVEL_B;
+								p->data->data_unique.block_data[ATBLOCK(cx,cy,cz)] = btd_map[GRAVEL_B].complete_id;
 							}
 							else if(cy < WATER_LEVEL){
 								p->data->data_unique.block_data[ATBLOCK(cx, cy, cz)] = liquid_layer;
@@ -230,10 +226,8 @@ void generate_chunk_data () {
 				for(int z = 0; z < CHUNK_SIZE; z++){
 					for(int y = 0; y < CHUNK_SIZE_Y; y++){
 						int i = x  + z * CHUNK_SIZE + y * CHUNK_LAYER;
-						if(p->data->data_unique.block_data[i] != WATER_B && (p->data->data_unique.block_data[i] < XGRASS_B || p->data->data_unique.block_data[i] > XFLOW6_B)){
-							p->data->data.block_data[i] = p->data->data_unique.block_data[i];
-						}
-						if(p->data->data.block_data[i] == LIGHT_B){
+
+						if(BLOCK_ID(p->data->data_unique.block_data[i]) == LIGHT_B){
 							struct ipos3* npos = malloc (sizeof(struct ipos3));
 							npos->_x = x;npos->_y = y;npos->_z = z;
 							GLL_lock(&p->data->lightlist);

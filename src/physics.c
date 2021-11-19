@@ -36,7 +36,7 @@ void get_world_section_around (int x, int y, int z, uint8_t* sec, int* posx, int
 			
 			for(int isy = y-3; isy <= y + 3; isy++){
 				if(current != NULL){
-					sec[index] = current->data.block_data[ATBLOCK(ccx, isy, ccz)];
+					sec[index] = IS_SOLID(current->data_unique.block_data[ATBLOCK(ccx, isy, ccz)]) ? STONE_B : 0;
 					
 					if(isy >= CHUNK_SIZE_Y ) sec[index] = AIR_B;
 					

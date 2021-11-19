@@ -31,7 +31,6 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 				struct sync_chunk_t* temp = malloc (sizeof(struct sync_chunk_t));
 				pthread_mutex_init(&temp->c_mutex, NULL); // This mutex is never used, but is destroyed by CLL_freeListAndData
 				
-				memcpy(temp->data.block_data, current->data.block_data, CHUNK_MEM);
 				memcpy(temp->data_unique.block_data, current->data_unique.block_data, CHUNK_MEM);
 				memcpy(temp->light.block_data, current->light.block_data, CHUNK_MEM);
 				temp->_x = current->_x;
@@ -58,7 +57,10 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 	
 	struct CLL_element* p;
 	for(p = calc_list.first; p != NULL; p = p->nxt){ // Delete Existing Light Data
-		memset (p->data->light.block_data, MIN_LIGHT, CHUNK_MEM);
+		//memset (p->data->light.block_data, 0, CHUNK_MEM);
+		for(int i = 0; i < CHUNK_MEM / 2; i++){
+			p->data->light.block_data[i] = MIN_LIGHT;
+		}
 	}
 	(*calc_func)(&calc_list);
 	
@@ -69,7 +71,7 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 			if(override){
 				memcpy(cpy->light.block_data, p->data->light.block_data, CHUNK_MEM); // Copy from temp to actual light buffer
 			}else{
-				for(int i = 0; i < CHUNK_MEM; i++){
+				for(int i = 0; i < CHUNK_MEM/2; i++){
 					if(cpy->light.block_data[i] < p->data->light.block_data[i]){
 						cpy->light.block_data[i] = p->data->light.block_data[i];
 					}
@@ -88,12 +90,12 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 }
 
 
-static void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int z, uint8_t llevel, bool fromup, struct CLL* calc_list){
+static void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int z, uint16_t llevel, bool fromup, struct CLL* calc_list){
 
 	if (llevel == MIN_LIGHT) return;
 	if (sct->light.block_data[ATBLOCK(x, y, z)] > llevel) return;
 	if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel && !fromup) return;
-	if (sct->data.block_data [ATBLOCK(x, y, z)] != AIR_B) return;
+	if (IS_SOLID(sct->data_unique.block_data [ATBLOCK(x, y, z)])) return;
 
 	
 	sct->light.block_data[ATBLOCK(x, y, z)] = llevel;
@@ -140,7 +142,7 @@ static void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int
 	}
 	
 	if(y-1 >= 0){
-		if (sct->data_unique.block_data [ATBLOCK(x, y-1, z)] == WATER_B) down_fac = 1; // Light gets dimmer through water
+		if (BLOCK_ID(sct->data_unique.block_data [ATBLOCK(x, y-1, z)]) == WATER_B) down_fac = 1; // Light gets dimmer through water
 		rec_skylight_func_sides (sct, x, y-1, z, llevel - down_fac, true, calc_list);
 	}
 }
@@ -149,21 +151,20 @@ void skylight_func (struct CLL* calc_list){
 
 	struct CLL_element* p;
 	for(p = calc_list->first; p != NULL; p = p->nxt){
-
+	
 		struct sync_chunk_t* sct = p->data;
 		for (int x = 0; x < CHUNK_SIZE; x++){
 			for(int z = 0; z < CHUNK_SIZE; z++){
-				uint8_t llevel = MAX_LIGHT;
+				uint16_t llevel = MAX_LIGHT;
 				for(int y = CHUNK_SIZE_Y-1; y >= 0; y--){
 					
 					if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel) break;
 					if (llevel == MIN_LIGHT) break;
-					if (sct->data.block_data [ATBLOCK(x, y, z)] != AIR_B) break;
+					if (IS_SOLID(sct->data_unique.block_data [ATBLOCK(x, y, z)])) break;
 					
 					sct->light.block_data[ATBLOCK(x, y, z)] = llevel;
 					
-					if (sct->data_unique.block_data [ATBLOCK(x, y-1, z)] == WATER_B) llevel--;
-					
+					if (BLOCK_ID(sct->data_unique.block_data [ATBLOCK(x, y-1, z)]) == WATER_B) llevel--;
 				}
 			}
 		}
@@ -179,11 +180,11 @@ void skylight_func (struct CLL* calc_list){
 	}
 }
 
-static void rec_blocklight_func (struct sync_chunk_t* sct, int x, int y, int z, uint8_t llevel, struct CLL* calc_list){
+static void rec_blocklight_func (struct sync_chunk_t* sct, int x, int y, int z, uint16_t llevel, struct CLL* calc_list){
 
 	if (llevel == MIN_LIGHT) return;
 	if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel) return;
-	if (sct->data.block_data [ATBLOCK(x, y, z)] != AIR_B && sct->data.block_data [ATBLOCK(x, y, z)] != LIGHT_B) return;
+	if (IS_SOLID(sct->data_unique.block_data[ATBLOCK(x, y, z)]) && BLOCK_ID(sct->data_unique.block_data [ATBLOCK(x, y, z)]) != LIGHT_B) return;
 
 	
 	sct->light.block_data[ATBLOCK(x, y, z)] = llevel;

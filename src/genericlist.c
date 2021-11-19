@@ -83,3 +83,11 @@ void GLL_lock ( struct GLL* gll ){
 void GLL_unlock ( struct GLL* gll ){
 	pthread_mutex_unlock (&gll->mutex);
 }
+
+void GLL_operation (struct GLL* gll, void (*operator)(struct GLL_element*)){
+	
+	for(struct GLL_element* e = gll->first; e != NULL; e = e->next){
+		(*operator)(e);
+	}
+	
+}

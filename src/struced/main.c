@@ -14,8 +14,8 @@
 #include <struced/appstate.h>
 #include <struced/octree.h>
 
-uint16_t width = 1280;
-uint16_t height = 960;
+uint16_t width = 1600;
+uint16_t height = 900;
 
 int main () {
 

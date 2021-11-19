@@ -3,6 +3,7 @@
 #include <worlddefs.h>
 #include <globallists.h>
 #include <raycast.h>
+#include <blocktexturedef.h>
 
 #include <math.h>
 #include <stdlib.h>
@@ -12,9 +13,9 @@ bool break_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 
 	if( in != NULL ){
 		
-		if (in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)] != AIR_B){
+		if (BLOCK_ID(in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)]) != AIR_B && BLOCK_ID(in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)]) != WATER_B){
 		
-			if (in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)] == LIGHT_B){
+			if (BLOCK_ID(in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)]) == LIGHT_B){
 				GLL_lock(&in->lightlist);
 				for(struct GLL_element* e = in->lightlist.first; e != NULL; e = e->next){
 					struct ipos3* d = e->data;
@@ -27,8 +28,7 @@ bool break_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 				GLL_unlock(&in->lightlist);
 			}
 			
-			in->data.block_data[ATBLOCK(ccx, ccy, ccz)] = AIR_B;
-			in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)] = AIR_B;
+			in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)] = btd_map[AIR_B].complete_id;
 			
 			lock_list(&chunk_list[3]);
 			int chunk_distance = (int)(MAX_LIGHT / CHUNK_SIZE) + 1;
@@ -57,7 +57,7 @@ bool place_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 	
 	struct sync_chunk_t* in = CLL_getDataAt (&chunk_list[0], chunk_x, chunk_z);
 	
-	if (in->data.block_data[ATBLOCK(ccx, ccy, ccz)] == AIR_B){
+	if (BLOCK_ID(in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)]) == AIR_B || BLOCK_ID(in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)]) == WATER_B){
 		return false;
 	}
 	
@@ -86,21 +86,16 @@ bool place_block_action (int chunk_x, int chunk_z, int ccx, int ccy, int ccz, fl
 	
 	if( in != NULL ){
 		
-		if (in->data.block_data[ATBLOCK(ccx, ccy, ccz)] == AIR_B){
+		if (BLOCK_ID(in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)]) == AIR_B || BLOCK_ID(in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)]) == WATER_B){
 			
-			if(gst._selected_block != WATER_B){
-				in->data.block_data[ATBLOCK(ccx, ccy, ccz)] = gst._selected_block;
-				in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)] = gst._selected_block;
-				
-				if(gst._selected_block == LIGHT_B){
-					struct ipos3* npos = malloc (sizeof(struct ipos3));
-					npos->_x = ccx;npos->_y = ccy;npos->_z = ccz;
-					GLL_add(&in->lightlist, npos);
-				}
-				
-			}else{
-				in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)] = gst._selected_block;
+			
+			if(gst._selected_block == LIGHT_B){
+				struct ipos3* npos = malloc (sizeof(struct ipos3));
+				npos->_x = ccx;npos->_y = ccy;npos->_z = ccz;
+				GLL_add(&in->lightlist, npos);
 			}
+
+			in->data_unique.block_data[ATBLOCK(ccx, ccy, ccz)] = btd_map[gst._selected_block].complete_id;
 			
 			lock_list(&chunk_list[3]);
 			int chunk_distance = (int)(MAX_LIGHT / CHUNK_SIZE) + 1;

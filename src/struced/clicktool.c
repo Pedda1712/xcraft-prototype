@@ -1,6 +1,8 @@
 #include <struced/clicktool.h>
 #include <struced/appstate.h>
 #include <struced/octree.h>
+#include <blocktexturedef.h>
+
 #include <raycast.h>
 #include <windowglobals.h>
 #include <worlddefs.h>
@@ -13,7 +15,7 @@
 	res<x-z>: result return
 */
 
-static void rotate_direction_by_ssoffset (float off1, float off2, float dirx, float diry, float dirz, float* resx, float* resy, float* resz){
+void rotate_direction_by_ssoffset (float off1, float off2, float dirx, float diry, float dirz, float* resx, float* resy, float* resz){
 
 	
 	// Todo: come up with better way to do this lol (calculate the vector in camera space, and translate it into the world?? might be good)	
@@ -53,6 +55,10 @@ static void rotate_direction_by_ssoffset (float off1, float off2, float dirx, fl
 void place_clicktool (bool p, float x,float y){
 
 	if(!p)return;
+	
+	/*
+		To know into which direction the highlighted area needs to be offset, we need to recheck the collision (this is kind of ass, move selection_orientation to ast maybe?)
+	 */
 
 	float posx = sin(ast._camera_pos[0]) * ast._camera_rad * cos(ast._camera_pos[1]);
 	float posy = sin(ast._camera_pos[1]) * ast._camera_rad;
@@ -61,23 +67,18 @@ void place_clicktool (bool p, float x,float y){
 	float dirx, diry, dirz;
 	rotate_direction_by_ssoffset(-x, y, -posx, -posy, -posz, &dirx, &diry, &dirz);
 	
+	int selection_orientation[3] = {0,0,0};
 	bool place_procedure (int ix, int iy, int iz, float ax, float ay, float az){
 
 		float iax = ax - (int)ax;
 		float iay = ay - (int)ay;
 		float iaz = az - (int)az;
 		
-		
-
-		struct block_t block = {ix, iy, iz, ast._selected_block};
+		struct block_t block = {ix, iy, iz, btd_map[ast._selected_block].complete_id};
 		if(OCT_check(block_tree, block)){
-
-			if (iax == 0.0f){ix = (dirx > 0) ? ix - 1 : ix + 1;}
-			if (iay == 0.0f){iy = (diry > 0) ? iy - 1 : iy + 1;}
-			if (iaz == 0.0f){iz = (dirz > 0) ? iz - 1 : iz + 1;}
-			struct block_t block_new = {ix, iy, iz, ast._selected_block};
-
-			add_block_octree (block_new);
+			selection_orientation[0] = (iax == 0.0f) ? ((dirx < 0) ? 1 : -1) : 0;
+			selection_orientation[1] = (iay == 0.0f) ? ((diry < 0) ? 1 : -1) : 0;
+			selection_orientation[2] = (iaz == 0.0f) ? ((dirz < 0) ? 1 : -1) : 0;
 			return true;
 		}
 
@@ -85,6 +86,22 @@ void place_clicktool (bool p, float x,float y){
 	}
 	
 	block_ray_actor_chunkfree (512, posx, posy, posz, dirx, diry, dirz, &place_procedure);
+	
+	/*
+		Go over each highlighted block (, offset it according to the side the mouse cursor is on,) and add that block to the octree
+	 */
+	
+	for(struct GLL_element* e = ast._highlight_list.first; e != NULL; e = e->next){
+		struct block_t block = *((struct block_t*)e->data);
+		
+		block._x += selection_orientation[0];
+		block._y += selection_orientation[1];
+		block._z += selection_orientation[2];
+		
+		if(!OCT_check(block_tree, block))
+			add_block_octree (block);
+
+	}
 
 }
 
@@ -92,25 +109,19 @@ void break_clicktool (bool p, float x,float y){
 
 	if (!p)return;
 
-	float posx = sin(ast._camera_pos[0]) * ast._camera_rad * cos(ast._camera_pos[1]);
-	float posy = sin(ast._camera_pos[1]) * ast._camera_rad;
-	float posz = cos(ast._camera_pos[0]) * ast._camera_rad * cos(ast._camera_pos[1]);
+	/*
+		Simply go over each highlighted block and remove it, if there is an entry in the octree for it
+	 */
 
-	float dirx, diry, dirz;
-	rotate_direction_by_ssoffset(-x, y, -posx, -posy, -posz, &dirx, &diry, &dirz);
-	
-	bool break_procedure (int ix, int iy, int iz, float, float, float){
+	for(struct GLL_element* e = ast._highlight_list.first; e != NULL; e = e->next){
 
-		struct block_t block = {ix, iy, iz, STONE_B};
+		struct block_t block = *((struct block_t*)e->data);
 		if(OCT_check(block_tree, block)){
 
 			rem_block_octree (block);
-			return true;
 		}
 
-		return false;
 	}
 	
-	block_ray_actor_chunkfree (512, posx, posy, posz, dirx, diry, dirz, &break_procedure);
 
 }

@@ -1,17 +1,17 @@
-Air 255 255 255 255 255 255
-Grass 2 0 1 1 1 1
-Dirt 2 2 2 2 2 2
-Stone 3 3 3 3 3 3
-Gravel 4 4 4 4 4 4
-Water 5 5 5 5 5 5
-Lightsource 6 6 6 6 6 6
-Snowgrass 2 7 8 8 8 8
-Snow 7 7 7 7 7 7 
-Grassblades 240 240 240 240 240 240
-Tallgrassblades 241 241 241 241 241 241
-Flowers1 242 242 242 242 242 242
-Tallflowers1 243 243 243 243 243 243
-Flowers2 244 244 244 244 244 244
-Tallflowers2 245 245 245 245 245 245
-Flowers3 246 246 246 246 246 246
-Tallflowers3 247 247 247 247 247 247
+Air 255 255 255 255 255 255 0
+Grass 2 0 1 1 1 1 1
+Dirt 2 2 2 2 2 2 1
+Stone 3 3 3 3 3 3 1
+Gravel 4 4 4 4 4 4 1
+Water 5 5 5 5 5 5 3
+Lightsource 6 6 6 6 6 6 1
+Snowgrass 2 7 8 8 8 8 1
+Snow 7 7 7 7 7 7 1
+Grassblades 240 240 240 240 240 240 2
+Tallgrassblades 241 241 241 241 241 241 2
+Flowers1 242 242 242 242 242 242 2
+Tallflowers1 243 243 243 243 243 243 2
+Flowers2 244 244 244 244 244 244 2
+Tallflowers2 245 245 245 245 245 245 2
+Flowers3 246 246 246 246 246 246 2
+Tallflowers3 247 247 247 247 247 247 2

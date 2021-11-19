@@ -465,7 +465,7 @@ void menu_overlay_state (float fTime){
 		} else {
 			drawtextpg(bt->backg, bt->_x, bt->_y, bt->_scale);
 		}
-		drawtextpg(bt->forg, bt->_x, bt->_y, bt->_scale);
+		drawtextpg(bt->forg, bt->_x, bt->_y + (bt->_scale * CHARACTER_BASE_SIZE_Y * 0.5f), bt->_scale);
 
 	}
 
@@ -489,7 +489,7 @@ void debug_fps_pos_state(float frameTime){
 
 	char fps_txt [50];
 	setfont(gst._gfx_font);
-	drawstring("XCraft build-28/10/21", 0.0f, 0.0f, 0.44f);
+	drawstring("XCraft build-18/11/21", 0.0f, 0.0f, 0.44f);
 	sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
  	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);
@@ -581,7 +581,7 @@ void init_game () {
 									&transition_to_selection));
 	GLL_add ( &main_menu_button_list,
 			  ui_create_button_fit ( ccaligned("Quit", UI_SCALE),
-									 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y,
+									 1.0f + 2*UI_SCALE*CHARACTER_BASE_SIZE_Y,
 									UI_SCALE,
 									BUTTON4_OFFSET,
 									BUTTON5_OFFSET,
@@ -614,7 +614,7 @@ void init_game () {
 									&continue_to_game));
 	GLL_add ( &world_selection_button_list,
 			  ui_create_button_fit ( ccaligned("Regenerate", UI_SCALE),
-									 1.0f + 3*UI_SCALE*CHARACTER_BASE_SIZE_Y,
+									 1.0f + 2*UI_SCALE*CHARACTER_BASE_SIZE_Y,
 									UI_SCALE,
 									BUTTON2_OFFSET,
 									BUTTON3_OFFSET,
@@ -623,7 +623,7 @@ void init_game () {
 									&transition_regen) );
 	GLL_add ( &world_selection_button_list,
 			  ui_create_button_fit ( ccaligned("   Back   ", UI_SCALE),
-									 1.0f + 6*UI_SCALE*CHARACTER_BASE_SIZE_Y,
+									 1.0f + 4*UI_SCALE*CHARACTER_BASE_SIZE_Y,
 									UI_SCALE,
 									BUTTON2_OFFSET,
 									BUTTON3_OFFSET,

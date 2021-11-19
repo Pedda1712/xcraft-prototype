@@ -2,13 +2,13 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 10
+#define WORLD_RANGE 8
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
 #define CHUNK_SIZE_Y 128
 #define CHUNK_LAYER (CHUNK_SIZE * CHUNK_SIZE)
-#define CHUNK_MEM (CHUNK_LAYER * CHUNK_SIZE_Y)
+#define CHUNK_MEM (CHUNK_LAYER * CHUNK_SIZE_Y * 2)
 
 #define BLOCK_SIZE 1.0f
 
@@ -24,6 +24,15 @@
 #define MIN_LIGHT 1
 
 #define BLOCK_TYPE_COUNT 17
+
+#define BLOCK_ID(x) ((uint8_t)((x) & 0xFF))
+#define SOLID_FLAG  (1 << 8)
+#define X_FLAG      (2  << 8)
+#define TRANS_FLAG  (3  << 8)
+#define IS_SOLID(x) (((x) >> 8) == 1)
+#define IS_X(x)     (((x) >> 8) == 2 )
+#define IS_TRANS(x) (((x) >> 8) == 3 )
+
 
 #define AIR_B    0
 #define GRASS_B  1
@@ -58,7 +67,11 @@ struct ipos3 {
 };
 
 struct chunk_t {
-	uint8_t block_data [CHUNK_MEM];
+	/*
+		bits 0 to 7 are the block id
+		bits 8 to 15 is the flag register for possible block types (solid block, x mesh)
+	 */
+	uint16_t block_data [CHUNK_MEM];
 };
 
 #include <pthread.h>
@@ -73,19 +86,17 @@ struct sync_chunk_t {
 	int32_t _z;
 
 	/*
-	 * data: all blocks EXCEPT water AND plants
 	 * data_unique: all blocks INCLUDING water AND plants // weird solution, but was easy to implement with existing code :P
 	 * light: lightlevel at block
 	 */
-	struct chunk_t data;
 	struct chunk_t data_unique;
 	struct chunk_t light;
 
 	bool updatemesh;
-	bool vbo_update[MESH_LEVELS/2];
-	uint32_t mesh_vbo [MESH_LEVELS/2];
-	uint32_t verts [MESH_LEVELS/2];
-	struct DFA mesh_buffer[MESH_LEVELS];
+	bool vbo_update[MESH_LEVELS/2]; // Flags
+	uint32_t mesh_vbo [MESH_LEVELS/2]; // VBO Objects
+	uint32_t verts [MESH_LEVELS/2]; // Vertex Count
+	struct DFA mesh_buffer[MESH_LEVELS]; // Raw Triangle Information
 
 	/*
 		List of all Light-Emitting Blocks
