@@ -22,8 +22,8 @@
 		- OpenGL 2.0 for Graphics
  */
 
-uint16_t width = 1280;
-uint16_t height = 960;
+uint16_t width = 1600;
+uint16_t height = 900;
 
 int main () {
 

@@ -9,15 +9,119 @@
 
 #include <ftw.h>
 
+#include <struced/octree.h>
 #include <game.h>
 
+struct GLL structure_cache [STRUCTURE_CACHE_SIZE];
 char w_path [MAX_WORLDNAME_LENGTH];
+
+void init_structure_cache (){
+	
+	for(int i = 0; i < STRUCTURE_CACHE_SIZE; i++){
+		structure_cache[i] = GLL_init();
+	}
+	read_structure_file_into_gll("struc/totem.struc", &structure_cache[0]);
+}
+
+void clean_structure_cache(){
+	for(int i = 0; i < STRUCTURE_CACHE_SIZE; i++){
+		GLL_free_rec(&structure_cache[i]);
+		GLL_destroy(&structure_cache[i]);
+	}
+}
+
+void read_structure_file_into_gll (char* fname, struct GLL* gll){
+	FILE* f = fopen(fname, "rb");
+	
+	if (f != NULL){
+		int size;
+		fread(&size, sizeof(int), 1, f);
+		
+		for(int i = 0; i < size; i++){
+			struct block_t* current = malloc (sizeof(struct block_t));
+			fread(current, sizeof(struct block_t), 1, f);
+			GLL_add(gll, current);
+		}
+		
+	}else{
+		printf("Error opening file %s\n", fname);
+	}
+	
+	fclose(f);
+}
+
+bool read_structure_log_into_gll (int x, int z, struct GLL* gll){
+	char ff [MAX_WORLDNAME_LENGTH];
+	char fl [MAX_WORLDNAME_LENGTH];
+	char fname  [512];
+	
+	(x >= 0) ? sprintf(ff, "p%i", abs(x)) : sprintf(ff, "n%i", abs(x));
+	(z >= 0) ? sprintf(fl, "p%i", abs(z)) : sprintf(fl, "n%i", abs(z));
+	sprintf(fname, "%s/struclog/%s%s.log", w_path, ff, fl);
+	
+	FILE* f = fopen(fname, "rb");
+	
+	if (f != NULL){
+		fseek(f, 0, SEEK_END);
+		uint32_t len = ftell(f); // how much data is there? -(how much do we need to read)
+		fseek(f, 0, SEEK_SET);
+		for(int i = 0; i < len/sizeof(struct block_t); i++){
+			struct block_t* current = malloc (sizeof(struct block_t));
+			fread(current, sizeof(struct block_t), 1, f);
+			GLL_add(gll, current);
+		}
+		
+		fclose(f);
+		
+		// remove the file
+		if(remove(fname) != 0){
+			printf("Error deleting struclog file %s\n", fname);
+		}
+		
+		return true;
+	}else{
+		return false;
+	}
+}
+
+void save_structure_log_into_file (struct structure_log_t* log){
+	char ff [MAX_WORLDNAME_LENGTH];
+	char fl [MAX_WORLDNAME_LENGTH];
+	char f  [512];
+	
+	(log->_x >= 0) ? sprintf(ff, "p%i", abs(log->_x)) : sprintf(ff, "n%i", abs(log->_x));
+	(log->_z >= 0) ? sprintf(fl, "p%i", abs(log->_z)) : sprintf(fl, "n%i", abs(log->_z));
+	sprintf(f, "%s/struclog/%s%s.log", w_path, ff, fl);
+		
+	FILE* file = fopen(f, "ab+"); // Open File for appending
+	
+	if(file != NULL){
+
+		fseek(file, 0, SEEK_END); // Append new blocks
+		for(struct GLL_element* e = log->blocks.first; e != NULL; e = e->next){
+			struct block_t* current = e->data;
+			fwrite(current, sizeof(struct block_t), 1, file);
+		}
+		
+		fclose(file);
+		
+	}else{
+		printf("Error opening file %s\n", f);
+	}
+	
+}
 
 void delete_current_world (){
 	int fntor (const char* fpath, const struct stat* sb, int typeflag){
 		remove (fpath);
 		return 0;
 	}
+	
+	char f [512];
+	sprintf(f, "%s/struclog", w_path);
+	ftw(f, &fntor, 64);
+	rmdir(f);
+	
 	ftw(w_path, &fntor, 64);
 	rmdir(w_path);
 }
@@ -33,6 +137,10 @@ void set_world_name (char* w_name){
 	
 	if (!(stat(w_path, &sb) == 0 && S_ISDIR(sb.st_mode))){
 		mkdir(w_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		
+		char structure_path [MAX_WORLDNAME_LENGTH+9];
+		sprintf(structure_path, "%s/struclog", w_path);
+		mkdir(structure_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		
 		char seedf [100];
 		sprintf(seedf, "%s/seed.dat", w_path);

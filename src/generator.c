@@ -6,6 +6,7 @@
 #include <worldsave.h>
 #include <genericlist.h>
 #include <blocktexturedef.h>
+#include <struced/octree.h>
 
 #include <pthread.h>
 
@@ -35,6 +36,28 @@ struct chunkspace_position chunk_gen_arg;
 
 #define HFUNC(y, m ,l) ((m) * (y) - (m) * (l))
 // y -> height, m -> slope, l -> "sea level"
+
+void determine_chunk_space_coords (int isx, int isz, int* ccx_r, int* ccz_r, int* chunk_x_r, int* chunk_z_r){
+	float _add_x = (isx > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
+	float _add_z = (isz > 0) ? CHUNK_SIZE / 2.0f : -CHUNK_SIZE / 2.0f;
+
+	int32_t chunk_x = (isx + _add_x) / CHUNK_SIZE;
+	int32_t chunk_z = (isz + _add_z) / CHUNK_SIZE;
+	
+	float c_x_off = (float)chunk_x - 0.5f;
+	float c_z_off = (float)chunk_z - 0.5f;
+	
+	int ccx = (int)((float)isx/BLOCK_SIZE - c_x_off * CHUNK_SIZE)%CHUNK_SIZE; // world space coordinate to chunk space coordinate
+	int ccz = (int)((float)isz/BLOCK_SIZE - c_z_off * CHUNK_SIZE)%CHUNK_SIZE;
+	
+	if(isx < 0 && ccx == 0) chunk_x++; // negative integer rounding ... -.-
+	if(isz < 0 && ccz == 0) chunk_z++;
+	
+	*ccx_r = ccx;
+	*ccz_r = ccz;
+	*chunk_x_r = chunk_x;
+	*chunk_z_r = chunk_z;
+}
 
 static float block_noise (float x, float y, float z, float slope, float median_height){ 
 	float first_oct  = noise((x) * 0.02f, (y) * 0.0125f, (z) * 0.02f);
@@ -117,6 +140,8 @@ void generate_chunk_data () {
 	
 	CLL_freeList(&or_chunks);
 	CLL_destroyList(&or_chunks);
+	
+	struct GLL structure_insertion_list = GLL_init();
 
 	struct CLL_element* p;
 	for(p = chunk_list[2].first; p != NULL; p = p->nxt){
@@ -166,6 +191,8 @@ void generate_chunk_data () {
 					float flow_modif = (noise((cx + x * CHUNK_SIZE) * 0.02f, 16.0f, (cz + z * CHUNK_SIZE) * 0.02f));
 					float nflow_modif = (noise((cx + x * CHUNK_SIZE) * 0.03f, 32.0f, (cz + z * CHUNK_SIZE) * 0.03f)) * 0.5f + (noise((cx + x * CHUNK_SIZE) * 0.9f, 32.0f, (cz + z * CHUNK_SIZE) * 0.9f)) * 0.5f;
 					
+					uint32_t top_y = 0;
+					
 					for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
 						
 						if( cy < SNOW_LEVEL + lake_modif * 16){
@@ -207,6 +234,7 @@ void generate_chunk_data () {
 									p->data->data_unique.block_data[ATBLOCK(cx, cy + 1, cz)] = grass_type;
 								}
 								
+								top_y = cy;
 								under_sky = false;
 							}
 						}else{
@@ -219,6 +247,17 @@ void generate_chunk_data () {
 							depth_below = 0;
 						}
 					}
+					
+					float structure1_modif = (noise((cx + x * CHUNK_SIZE) * 0.9f, 0, (cz + z * CHUNK_SIZE) * 0.9f));
+					
+					if(structure1_modif > 0.65f && top_y > WATER_LEVEL){
+						struct structure_t* new = malloc(sizeof(struct structure_t));
+						struct ipos3 p = {cx + (x - .5f) * CHUNK_SIZE, top_y, cz + (z - .5f) * CHUNK_SIZE};
+						new->base = p;
+						new->index = 0;
+						GLL_add(&structure_insertion_list, new);
+					}
+					
 				}
 			}
 		}else{
@@ -238,8 +277,109 @@ void generate_chunk_data () {
 				}
 			}
 		}
+		
+		/*
+			Check if Structures have been generated in this chunk while it was out of range
+		 */
+		
+		struct GLL possible_structures = GLL_init();
+		
+		if(read_structure_log_into_gll(x, z, &possible_structures)){ // there are structure-blocks!
+			for(struct GLL_element* e = possible_structures.first; e != NULL; e = e->next){
+				struct block_t* current = e->data;
+				p->data->data_unique.block_data[ATBLOCK(current->_x, current->_y, current->_z)] = current->_type;
+			}
+		}
+		
+		GLL_free_rec(&possible_structures);
+		GLL_destroy(&possible_structures);
+		
 		chunk_data_unsync(p->data);
 	}
+	
+	struct GLL or_structure_log = GLL_init();
+	
+	// Insert the Structures
+	lock_list(&chunk_list[1]);
+	for (struct GLL_element* e = structure_insertion_list.first; e != NULL; e = e->next) { // the newly generated structures
+		struct structure_t* current = e->data;
+		struct structure_log_t* current_log = NULL;
+		
+		int t, chunk_x, chunk_z;
+		determine_chunk_space_coords(current->base._x, current->base._z, &t, &t, &chunk_x, &chunk_z);
+		
+		struct sync_chunk_t* patient = CLL_getDataAt(&chunk_list[0], chunk_x, chunk_z); // Start operating on the chunk of the base block
+		for(struct GLL_element* p = structure_cache[current->index].first; p != NULL; p = p->next){
+			
+			struct block_t* current_block = p->data;
+			
+			int ccx;
+			int ccz;
+			int new_chunk_x;
+			int new_chunk_z;
+			determine_chunk_space_coords(current_block->_x + current->base._x, current_block->_z + current->base._z, &ccx, &ccz, &new_chunk_x, &new_chunk_z);
+			
+			if(new_chunk_x != chunk_x || new_chunk_z != chunk_z){
+				chunk_x = new_chunk_x;
+				chunk_z = new_chunk_z;
+				patient = CLL_getDataAt(&chunk_list[0], chunk_x, chunk_z); // Start operating on the chunk of the base block
+				
+				if(patient != NULL){
+					CLL_add(&chunk_list[1], patient);
+				}else{ // Chunk is Out of Range, add entry to the or_structure_log if it doesnt already exist
+					bool exists = false;
+					for(struct GLL_element* e = or_structure_log.first; e != NULL; e = e->next){
+						struct structure_log_t* log = e->data;
+						if(log->_x == chunk_x && log->_z == chunk_z){
+							current_log = log;
+							exists = true;
+							break;
+						}
+					}
+					if(!exists){
+						struct structure_log_t* log = malloc(sizeof(struct structure_log_t));
+						log->_x = chunk_x;
+						log->_z = chunk_z;
+						log->blocks = GLL_init();
+						GLL_add(&or_structure_log, log);
+						current_log = log;
+					}
+				}
+			}
+						
+			if(patient != NULL){
+				patient->data_unique.block_data[ATBLOCK(ccx, current_block->_y + current->base._y, ccz)] = current_block->_type;
+			}else{ // Chunk with blocks in it is not loaded
+				
+				struct block_t* local_block = malloc (sizeof(struct block_t));
+				struct block_t t = {ccx, current_block->_y + current->base._y, ccz, current_block->_type}; 
+				*local_block = t;
+				
+				if(current_log != NULL){
+					GLL_add(&current_log->blocks, local_block);
+				}
+				
+			}
+			
+		}
+	}
+	unlock_list(&chunk_list[1]);
+	
+	// Push the Out-Of-Range Parts of the Structures to a file
+	
+	for(struct GLL_element* e = or_structure_log.first; e != NULL; e = e->next){ // destroy the lists;
+		struct structure_log_t* log = e->data;
+		
+		save_structure_log_into_file (log);
+		
+		GLL_free_rec(&log->blocks);
+		GLL_destroy(&log->blocks);
+	}
+	GLL_free_rec(&or_structure_log);
+	GLL_destroy(&or_structure_log);
+	
+	GLL_free_rec(&structure_insertion_list);
+	GLL_destroy(&structure_insertion_list);
 
 	// When Generation is done, rebuild Meshes for all Chunks who neighbour the new ones
 	lock_list(&chunk_list[1]);

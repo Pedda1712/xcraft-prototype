@@ -422,6 +422,7 @@ void app_selection_draw_state   (float){
 	
 	struct block_t* selection = malloc(sizeof(struct block_t));
 	bool selection_orientation[3] = {0,0,0};
+	bool selection_success = false;
 	bool select_procedure (int ix, int iy, int iz, float ax, float ay, float az){
 		
 		float iax = ax - (int)ax;
@@ -434,7 +435,7 @@ void app_selection_draw_state   (float){
 			selection_orientation[0] = (iax == 0.0f) ? true : false;
 			selection_orientation[1] = (iay == 0.0f) ? true : false;
 			selection_orientation[2] = (iaz == 0.0f) ? true : false;
-
+			selection_success = true;
 			*selection = block;
 			return true;
 		}
@@ -444,12 +445,14 @@ void app_selection_draw_state   (float){
 	
 	block_ray_actor_chunkfree (512, posx, posy, posz, dirx, diry, dirz, &select_procedure);
 	
+	//printf("%i %i %i\n", selection->_x, selection->_y, selection->_z);
 	GLL_free_rec(&ast._highlight_list); // Clear the selection list of last frame
 	
 	/*
 		Depending on the Selected Shape, fill around the center that you found with square or circle
 	 */
 	
+	if(selection_success)
 	switch(ast._click_shape){
 		
 		case POINT_CLICK_SHAPE:{
@@ -991,7 +994,7 @@ void init_app_state_system (){
 	
 	for(int x = -1; x <= 1; x++){
 		for(int z = -1; z <= 1; z++){
-			struct block_t btt = {x, -1, z, GRASS_B};
+			struct block_t btt = {x, -1, z, btd_map[GRASS_B].complete_id};
 			add_block_octree(btt);
 		}
 	}

@@ -528,6 +528,7 @@ void init_game () {
 	gst._player_box._l = 0.5;
 
 	set_world_name ("default");
+	init_structure_cache();
 
 	struct chunkspace_position pos = {0,0};
 	// Generate the initial Chunks on the main thread
@@ -642,6 +643,8 @@ void init_game () {
 void exit_game () {
 
 	dump_player_data();
+	
+	clean_structure_cache();
 
 	GLL_free_rec_btn (&main_menu_button_list);
 	GLL_destroy (&main_menu_button_list);
