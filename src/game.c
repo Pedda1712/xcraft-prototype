@@ -489,7 +489,7 @@ void debug_fps_pos_state(float frameTime){
 
 	char fps_txt [50];
 	setfont(gst._gfx_font);
-	drawstring("XCraft build-18/11/21", 0.0f, 0.0f, 0.44f);
+	drawstring("XCraft build-20/11/21", 0.0f, 0.0f, 0.44f);
 	sprintf(fps_txt, "FPS: %f", 1.0f / frameTime);
 	drawstring(fps_txt, 0.0f, CHARACTER_BASE_SIZE_Y * 0.44f, 0.44f);
  	sprintf(fps_txt, "X:%f, Y:%f, Z:%f", gst._player_x, gst._player_y, gst._player_z);

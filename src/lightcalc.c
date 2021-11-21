@@ -142,7 +142,7 @@ static void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int
 	}
 	
 	if(y-1 >= 0){
-		if (BLOCK_ID(sct->data_unique.block_data [ATBLOCK(x, y-1, z)]) == WATER_B) down_fac = 1; // Light gets dimmer through water
+		if (BLOCK_ID(sct->data_unique.block_data [ATBLOCK(x, y-1, z)]) == WATER_B || IS_P(sct->data_unique.block_data [ATBLOCK(x, y-1, z)])) down_fac = 1; // Light gets dimmer through water
 		rec_skylight_func_sides (sct, x, y-1, z, llevel - down_fac, true, calc_list);
 	}
 }
@@ -161,6 +161,7 @@ void skylight_func (struct CLL* calc_list){
 					if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel) break;
 					if (llevel == MIN_LIGHT) break;
 					if (IS_SOLID(sct->data_unique.block_data [ATBLOCK(x, y, z)])) break;
+					if(IS_P(sct->data_unique.block_data [ATBLOCK(x, y, z)])) llevel--;
 					
 					sct->light.block_data[ATBLOCK(x, y, z)] = llevel;
 					

@@ -2,7 +2,7 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 8
+#define WORLD_RANGE 12
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
@@ -23,15 +23,17 @@
 #define MAX_LIGHT 15
 #define MIN_LIGHT 1
 
-#define BLOCK_TYPE_COUNT 17
+#define BLOCK_TYPE_COUNT 19
 
 #define BLOCK_ID(x) ((uint8_t)((x) & 0xFF))
 #define SOLID_FLAG  (1 << 8)
-#define X_FLAG      (2  << 8)
-#define TRANS_FLAG  (3  << 8)
+#define X_FLAG      (2 << 8)
+#define TRANS_FLAG  (3 << 8)
+#define P_FLAG      (4 << 8)
 #define IS_SOLID(x) (((x) >> 8) == 1)
-#define IS_X(x)     (((x) >> 8) == 2 )
-#define IS_TRANS(x) (((x) >> 8) == 3 )
+#define IS_X(x)     (((x) >> 8) == 2)
+#define IS_P(x)		(((x) >> 8) == 4)
+#define IS_TRANS(x) (((x) >> 8) == 3)
 
 
 #define AIR_B    0
@@ -51,6 +53,8 @@
 #define XFLOW4_B 14
 #define XFLOW5_B 15
 #define XFLOW6_B 16
+#define LEAVES_B 17
+#define LOG_B    18
 
 #define ATCHUNK(x,z) ((x) + ((z) * (WORLD_RANGE*2+1)))
 #define ATBLOCK(x,y,z) ((x) + ((z) * CHUNK_SIZE) + ((y) * CHUNK_LAYER))

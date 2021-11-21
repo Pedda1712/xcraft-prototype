@@ -568,6 +568,64 @@ static void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, s
 				uint16_t block_t = data->block_data[ATBLOCK(x,y,z)]; // The Block Type at the current position
 				if(IS_X(block_t)){
 					emit_x(in, wx, wy, wz, Y_AXIS, true, BLOCK_ID(block_t), emit_offset, false, in->light.block_data[ATBLOCK(x,y,z)]);
+				}else if(IS_P(block_t)){
+					bool shortened_block = false; // Determine if the top side of the block is shifted down
+					
+					if(!((y + 1) == CHUNK_SIZE_Y)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x,y+1,z)]))
+							emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)]);
+					}else{
+						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT);
+					}
+					
+					if(!((y - 1) < 0)){
+						if(!IS_P(data->block_data[ATBLOCK(x,y-1,z)]) && !IS_SOLID(data->block_data[ATBLOCK(x,y-1,z)])){
+							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)]);
+						}
+					}
+					
+					if(!((x + 1) == CHUNK_SIZE)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x+1,y,z)]))
+							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)]);
+					}else{
+						if(neighbour_data[0] != NULL)
+							if(!IS_SOLID(neighbour_data[0]->block_data[ATBLOCK(0,y,z)]))
+								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)]);
+					}
+					
+					if(!((x - 1) < 0)){
+						if(!IS_P(data->block_data[ATBLOCK(x-1,y,z)]) && !IS_SOLID(data->block_data[ATBLOCK(x-1,y,z)])){
+							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)]);
+						}
+					}else{
+						if(neighbour_data[1] != NULL){
+							if(!IS_P(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)]) && !IS_SOLID(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)])){
+								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)]);
+							}
+						}
+					}
+					
+					if(!((z + 1) == CHUNK_SIZE)){
+						if(!IS_SOLID(data->block_data[ATBLOCK(x,y,z+1)]))
+							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)]);
+					}else{
+						if(neighbour_data[2] != NULL){
+							if(!IS_SOLID(neighbour_data[2]->block_data[ATBLOCK(x,y,0)]))
+								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)]);
+						}
+					}
+					
+					if(!((z - 1) < 0)){
+						if(!IS_P(data->block_data[ATBLOCK(x,y,z-1)]) && !IS_SOLID(data->block_data[ATBLOCK(x,y,z-1)])){
+							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)]);
+						}
+					}else{
+						if(neighbour_data[3] != NULL){
+							if(!IS_P(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)]) && !IS_SOLID(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)])){
+								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)]);
+							}
+						}
+					}
 				}
 			}
 		}

@@ -22,6 +22,8 @@ struct blocktexdef_t btd_map [BLOCK_TYPE_COUNT] = { // Default BTD values
 	{{245, 245, 245, 245, 245, 245}, 64, 14 + X_FLAG}, // Grass Blades with Flowers
 	{{246, 246, 246, 246, 246, 246}, 64, 15 + X_FLAG}, // Grass Blades with Flowers
 	{{247, 247, 247, 247, 247, 247}, 64, 16 + X_FLAG}, // Grass Blades with Flowers
+	{{9, 9, 9, 9, 9, 9}, 128, 17 + P_FLAG}, // Leaves
+	{{11,11,10, 10, 10, 10}, 128, 18 + SOLID_FLAG}, // Log
 };
 
 char blockname_map [BLOCK_TYPE_COUNT] [MAX_BLOCKNAME_LENGTH] = {
