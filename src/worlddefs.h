@@ -2,15 +2,13 @@
 #define WORLDDEFS
 #include <stdint.h>
 
-#define WORLD_RANGE 12
+#define WORLD_RANGE 16
 #define NUMBER_CHUNKS ((WORLD_RANGE*2+1)*(WORLD_RANGE*2+1))
 
 #define CHUNK_SIZE 16
 #define CHUNK_SIZE_Y 128
 #define CHUNK_LAYER (CHUNK_SIZE * CHUNK_SIZE)
 #define CHUNK_MEM (CHUNK_LAYER * CHUNK_SIZE_Y * 2)
-
-#define BLOCK_SIZE 1.0f
 
 #define MESH_LEVELS 6
 
@@ -35,26 +33,27 @@
 #define IS_P(x)		(((x) >> 8) == 4)
 #define IS_TRANS(x) (((x) >> 8) == 3)
 
-
-#define AIR_B    0
-#define GRASS_B  1
-#define DIRT_B   2
-#define STONE_B  3
-#define GRAVEL_B 4
-#define WATER_B  5
-#define LIGHT_B  6
-#define SGRASS_B 7
-#define SNOW_B   8
-#define XGRASS_B 9
-#define XGRAST_B 10
-#define XFLOW1_B 11
-#define XFLOW2_B 12
-#define XFLOW3_B 13
-#define XFLOW4_B 14
-#define XFLOW5_B 15
-#define XFLOW6_B 16
-#define LEAVES_B 17
-#define LOG_B    18
+enum BLOCK_INDICES {
+	AIR_B=0, 
+	GRASS_B, 
+	DIRT_B, 
+	STONE_B, 
+	GRAVEL_B, 
+	WATER_B, 
+	LIGHT_B, 
+	SGRASS_B, 
+	SNOW_B, 
+	XGRASS_B, 
+	XGRAST_B, 
+	XFLOW1_B, 
+	XFLOW2_B,
+	XFLOW3_B, 
+	XFLOW4_B, 
+	XFLOW5_B, 
+	XFLOW6_B, 
+	LEAVES_B, 
+	LOG_B
+};
 
 #define ATCHUNK(x,z) ((x) + ((z) * (WORLD_RANGE*2+1)))
 #define ATBLOCK(x,y,z) ((x) + ((z) * CHUNK_SIZE) + ((y) * CHUNK_LAYER))
@@ -78,7 +77,6 @@ struct chunk_t {
 	uint16_t block_data [CHUNK_MEM];
 };
 
-#include <pthread.h>
 #include <pthread.h>
 #include <dynamicarray.h>
 #include <stdbool.h>

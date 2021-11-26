@@ -4,6 +4,7 @@
 #include <chunklist.h>
 #include <globallists.h>
 #include <genericlist.h>
+#include <generator.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -89,96 +90,174 @@ void calculate_light (struct sync_chunk_t* for_chunk, void (*calc_func)(struct C
 	
 }
 
-
-static void rec_skylight_func_sides (struct sync_chunk_t* sct, int x, int y, int z, uint16_t llevel, bool fromup, struct CLL* calc_list){
-
-	if (llevel == MIN_LIGHT) return;
-	if (sct->light.block_data[ATBLOCK(x, y, z)] > llevel) return;
-	if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel && !fromup) return;
-	if (IS_SOLID(sct->data_unique.block_data [ATBLOCK(x, y, z)])) return;
-
-	
-	sct->light.block_data[ATBLOCK(x, y, z)] = llevel;
-	
-	uint8_t down_fac = 0;
-	
-	if ( y+1 < CHUNK_SIZE_Y ){
-		rec_skylight_func_sides (sct, x, y+1, z, llevel - 1, false, calc_list);
-	}
-	
-	int chunk_x = sct->_x;
-	int chunk_z = sct->_z;
-	if ( x+1 < CHUNK_SIZE ){
-		rec_skylight_func_sides (sct, x+1, y, z, llevel - 1, false, calc_list);
-	}else{
-		struct sync_chunk_t* n_chunk = CLL_getDataAt(calc_list, chunk_x + 1, chunk_z);
-		if(n_chunk != NULL){
-			rec_skylight_func_sides (n_chunk, 0, y, z, llevel - 1, false, calc_list);
-		}
-	}
-	if ( x-1 >= 0 ){
-		rec_skylight_func_sides (sct, x-1, y, z, llevel - 1, false, calc_list);
-	}else{
-		struct sync_chunk_t* n_chunk = CLL_getDataAt(calc_list, chunk_x - 1, chunk_z);
-		if(n_chunk != NULL){
-			rec_skylight_func_sides (n_chunk, CHUNK_SIZE-1, y, z, llevel - 1, false, calc_list);
-		}
-	}
-	if ( z+1 < CHUNK_SIZE ){
-		rec_skylight_func_sides (sct, x, y, z+1, llevel - 1, false, calc_list);
-	}else{
-		struct sync_chunk_t* n_chunk = CLL_getDataAt(calc_list, chunk_x, chunk_z + 1);
-		if(n_chunk != NULL){
-			rec_skylight_func_sides (n_chunk, x, y, 0, llevel - 1, false, calc_list);
-		}
-	}
-	if ( z-1 >= 0 ){
-		rec_skylight_func_sides (sct, x, y, z-1, llevel - 1, false, calc_list);
-	}else{
-		struct sync_chunk_t* n_chunk = CLL_getDataAt(calc_list, chunk_x, chunk_z - 1);
-		if(n_chunk != NULL){
-			rec_skylight_func_sides (n_chunk, x, y, CHUNK_SIZE-1, llevel - 1, false, calc_list);
-		}
-	}
-	
-	if(y-1 >= 0){
-		if (BLOCK_ID(sct->data_unique.block_data [ATBLOCK(x, y-1, z)]) == WATER_B || IS_P(sct->data_unique.block_data [ATBLOCK(x, y-1, z)])) down_fac = 1; // Light gets dimmer through water
-		rec_skylight_func_sides (sct, x, y-1, z, llevel - down_fac, true, calc_list);
-	}
-}
-
 void skylight_func (struct CLL* calc_list){
-
+	
+	int llength = 0;
+	for(struct CLL_element* e = calc_list->first; e != NULL; e = e->nxt) llength++;
+	
+	int current_que_length = 0;
+	
+	struct ipos3 lighting_priority_que [CHUNK_LAYER * CHUNK_SIZE_Y * llength]; // statically allocated, because dynamically allocating lists with like 100000+ members is big oof for cpu time (so we do big oof for memory stack instead)
+	
+	void push_back_position (int x, int y, int z){
+		
+		struct ipos3 t = {x,y,z};
+		lighting_priority_que[current_que_length] = t;
+		current_que_length++;
+	}
+	
+	/*
+		initialize the priority que, by filling every Air Block at the Max Height with MAX_LIGHT
+	 */
+	
+	int32_t base_chunk_x = calc_list->first->data->_x;
+	int32_t base_chunk_z = calc_list->first->data->_z;
+	
 	struct CLL_element* p;
 	for(p = calc_list->first; p != NULL; p = p->nxt){
-	
 		struct sync_chunk_t* sct = p->data;
+		
+		int32_t offset_x = (sct->_x - base_chunk_x) * CHUNK_SIZE;
+		int32_t offset_z = (sct->_z - base_chunk_z) * CHUNK_SIZE;
+		
 		for (int x = 0; x < CHUNK_SIZE; x++){
 			for(int z = 0; z < CHUNK_SIZE; z++){
 				uint16_t llevel = MAX_LIGHT;
-				for(int y = CHUNK_SIZE_Y-1; y >= 0; y--){
-					
-					if (sct->light.block_data[ATBLOCK(x, y, z)] >= llevel) break;
-					if (llevel == MIN_LIGHT) break;
-					if (IS_SOLID(sct->data_unique.block_data [ATBLOCK(x, y, z)])) break;
-					if(IS_P(sct->data_unique.block_data [ATBLOCK(x, y, z)])) llevel--;
-					
-					sct->light.block_data[ATBLOCK(x, y, z)] = llevel;
-					
-					if (BLOCK_ID(sct->data_unique.block_data [ATBLOCK(x, y-1, z)]) == WATER_B) llevel--;
+				int y = CHUNK_SIZE_Y-1;
+				if(!IS_SOLID( sct->data_unique.block_data[ATBLOCK(x, y, z)])){
+					sct->light.block_data[ATBLOCK(x,y,z)] = llevel;
+					push_back_position(x + offset_x, y, z + offset_z);
 				}
 			}
 		}
 	}
-	for(p = calc_list->first; p != NULL; p = p->nxt){
-		int y = CHUNK_SIZE_Y - 1;
-		for (int x = 0; x < CHUNK_SIZE; x++){
-			for(int z = 0; z < CHUNK_SIZE; z++){
+	/*
+		Propagate Light on the most efficient path using the priority-que
+	 */
+	
+	struct sync_chunk_t* patient = calc_list->first->data;
+	int current_chunk_x = base_chunk_x;
+	int current_chunk_z = base_chunk_z;
+	for(int i = 0; i < current_que_length; i++) { // go over the blocks in decending order of light intensity
+		
+		struct ipos3* local = &lighting_priority_que[i];
+		int cs_x = local->_x % 16;
+		int cs_y = local->_y;
+		int cs_z = local->_z % 16;
+		int new_chunk_x = (local->_x / 16) + base_chunk_x;
+		int new_chunk_z = (local->_z / 16) + base_chunk_z;
+						
+		if(new_chunk_x != current_chunk_x || new_chunk_z != current_chunk_z){ // if we are in a different chunk now
+			current_chunk_x = new_chunk_x;
+			current_chunk_z = new_chunk_z;
 
-				rec_skylight_func_sides(p->data, x, y, z, MAX_LIGHT, true, calc_list);
-			}
+			patient = CLL_getDataAt(calc_list, current_chunk_x, current_chunk_z);
+			//printf("ok\n");
 		}
+		
+		if(patient != NULL){
+			
+			uint8_t llevel = patient->light.block_data[ATBLOCK(cs_x, cs_y, cs_z)];
+			
+			if( llevel == MIN_LIGHT ){
+				continue;
+			}
+			
+			if(cs_y-1 >= 0){
+				uint8_t down_fac = (llevel == MAX_LIGHT) ? 0 : 1;
+				if (BLOCK_ID(patient->data_unique.block_data [ATBLOCK(cs_x, cs_y-1, cs_z)]) == WATER_B || IS_P(patient->data_unique.block_data [ATBLOCK(cs_x, cs_y-1, cs_z)])) down_fac = 1; // Light gets dimmer through water
+				
+				if(!(patient->light.block_data[ATBLOCK(cs_x, cs_y-1, cs_z)] >= llevel-down_fac)) // If next block isnt already lit
+				if( !IS_SOLID(patient->data_unique.block_data[ATBLOCK(cs_x, cs_y-1, cs_z)] )){ // If next block isnt solid
+					patient->light.block_data[ATBLOCK(cs_x, cs_y-1, cs_z)] = llevel - down_fac;
+					push_back_position(local->_x, cs_y-1, local->_z); // Add new block to the que
+				}
+			}
+			
+			if ( cs_y+1 < CHUNK_SIZE_Y ){
+				if(!(patient->light.block_data[ATBLOCK(cs_x, cs_y+1, cs_z)] >= llevel-1))
+				if( !IS_SOLID(patient->data_unique.block_data[ATBLOCK(cs_x, cs_y+1, cs_z)] )){
+					patient->light.block_data[ATBLOCK(cs_x, cs_y+1, cs_z)] = llevel - 1;
+					push_back_position(local->_x, cs_y+1, local->_z);
+				}
+			}
+			
+
+			if ( cs_x+1 < CHUNK_SIZE ){
+				if(!(patient->light.block_data[ATBLOCK(cs_x+1, cs_y, cs_z)] >= llevel-1))
+				if( !IS_SOLID(patient->data_unique.block_data[ATBLOCK(cs_x+1, cs_y, cs_z)] )){
+					patient->light.block_data[ATBLOCK(cs_x+1, cs_y, cs_z)] = llevel - 1;
+					push_back_position(local->_x + 1, cs_y, local->_z);
+				}
+			}else{
+				struct sync_chunk_t* n_chunk = CLL_getDataAt(calc_list, current_chunk_x + 1, current_chunk_z);
+				if(n_chunk != NULL){
+					if(!(n_chunk->light.block_data[ATBLOCK(0, cs_y, cs_z)] >= llevel-1))
+					if( !IS_SOLID(n_chunk->data_unique.block_data[ATBLOCK(0, cs_y, cs_z)] )){
+						n_chunk->light.block_data[ATBLOCK(0, cs_y, cs_z)] = llevel - 1;
+						push_back_position(local->_x + 1, cs_y, local->_z);
+					}
+				}
+			}
+			
+			if ( cs_x-1 >= 0 ){
+				if(!(patient->light.block_data[ATBLOCK(cs_x-1, cs_y, cs_z)] >= llevel-1))
+				if( !IS_SOLID(patient->data_unique.block_data[ATBLOCK(cs_x-1, cs_y, cs_z)] )){
+					patient->light.block_data[ATBLOCK(cs_x-1, cs_y, cs_z)] = llevel - 1;
+					push_back_position(local->_x - 1, cs_y, local->_z);
+				}
+			}else{
+				struct sync_chunk_t* n_chunk = CLL_getDataAt(calc_list, current_chunk_x - 1, current_chunk_z);
+				if(n_chunk != NULL){
+					
+					if(!(n_chunk->light.block_data[ATBLOCK(CHUNK_SIZE - 1, cs_y, cs_z)] >= llevel-1))
+					if( !IS_SOLID(n_chunk->data_unique.block_data[ATBLOCK(CHUNK_SIZE - 1, cs_y, cs_z)] )){
+						n_chunk->light.block_data[ATBLOCK(CHUNK_SIZE - 1, cs_y, cs_z)] = llevel - 1;
+						push_back_position(local->_x - 1, cs_y, local->_z);
+					}
+				}
+			}
+			
+			if ( cs_z+1 < CHUNK_SIZE ){
+				if(!(patient->light.block_data[ATBLOCK(cs_x, cs_y, cs_z+1)] >= llevel-1))
+				if( !IS_SOLID(patient->data_unique.block_data[ATBLOCK(cs_x, cs_y, cs_z+1)] )){
+					patient->light.block_data[ATBLOCK(cs_x, cs_y, cs_z+1)] = llevel - 1;
+					push_back_position(local->_x, cs_y, local->_z + 1);
+				}
+			}else{
+				struct sync_chunk_t* n_chunk = CLL_getDataAt(calc_list, current_chunk_x, current_chunk_z + 1);
+				if(n_chunk != NULL){
+					if(!(n_chunk->light.block_data[ATBLOCK(cs_x, cs_y, 0)] >= llevel-1))
+					if( !IS_SOLID(n_chunk->data_unique.block_data[ATBLOCK(cs_x, cs_y, 0)] )){
+						n_chunk->light.block_data[ATBLOCK(cs_x, cs_y, 0)] = llevel - 1;
+						push_back_position(local->_x, cs_y, local->_z + 1);
+					}
+				}
+			}
+			
+			if ( cs_z-1 >= 0 ){
+				if(!(patient->light.block_data[ATBLOCK(cs_x, cs_y, cs_z-1)] >= llevel-1))
+				if( !IS_SOLID(patient->data_unique.block_data[ATBLOCK(cs_x, cs_y, cs_z-1)] )){
+					patient->light.block_data[ATBLOCK(cs_x, cs_y, cs_z-1)] = llevel - 1;
+					push_back_position(local->_x, cs_y, local->_z - 1);
+				}
+			}else{
+				struct sync_chunk_t* n_chunk = CLL_getDataAt(calc_list, current_chunk_x, current_chunk_z - 1);
+				if(n_chunk != NULL){
+					
+					if(!(n_chunk->light.block_data[ATBLOCK(cs_x, cs_y, CHUNK_SIZE - 1)] >= llevel-1))
+					if( !IS_SOLID(n_chunk->data_unique.block_data[ATBLOCK(cs_x, cs_y, CHUNK_SIZE - 1)] )){
+						n_chunk->light.block_data[ATBLOCK(cs_x, cs_y, CHUNK_SIZE - 1)] = llevel - 1;
+						push_back_position(local->_x, cs_y, local->_z - 1);
+					}
+				}
+			}
+			
+			
+		}
+		
 	}
+
 }
 
 static void rec_blocklight_func (struct sync_chunk_t* sct, int x, int y, int z, uint16_t llevel, struct CLL* calc_list){

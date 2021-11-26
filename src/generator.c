@@ -47,8 +47,8 @@ void determine_chunk_space_coords (int isx, int isz, int* ccx_r, int* ccz_r, int
 	float c_x_off = (float)chunk_x - 0.5f;
 	float c_z_off = (float)chunk_z - 0.5f;
 	
-	int ccx = (int)((float)isx/BLOCK_SIZE - c_x_off * CHUNK_SIZE)%CHUNK_SIZE; // world space coordinate to chunk space coordinate
-	int ccz = (int)((float)isz/BLOCK_SIZE - c_z_off * CHUNK_SIZE)%CHUNK_SIZE;
+	int ccx = (int)((float)isx - c_x_off * CHUNK_SIZE)%CHUNK_SIZE; // world space coordinate to chunk space coordinate
+	int ccz = (int)((float)isz - c_z_off * CHUNK_SIZE)%CHUNK_SIZE;
 	
 	if(isx < 0 && ccx == 0) chunk_x++; // negative integer rounding ... -.-
 	if(isz < 0 && ccz == 0) chunk_z++;
@@ -172,6 +172,7 @@ void generate_chunk_data () {
 					ocean_modif-=0.05125f;
 					
 					float ocean_slope = (ocean_modif < 0.0f) ? 0.0f : ocean_modif;
+					float ocean_invert = 1.0f - ocean_slope;
 					float slope_modifier = (noise((cx + x * CHUNK_SIZE) * 0.005f, 300.0f, (cz + z * CHUNK_SIZE) * 0.005f) + 1.125f) + ocean_slope * (5 * ocean_slope + 6); // how strong the height based fade out is (higher fadeout -> flatter terrain, ocean contributes to flatness to have less islands)
 					slope_modifier = pow(slope_modifier, 16); // make distinction between flat and hilly areas more distinctive by raising to power
 					
@@ -181,9 +182,10 @@ void generate_chunk_data () {
 					slope_modifier = slope_modifier * 0.014f;
 					if(slope_modifier < 0.014f) slope_modifier = 0.014f;
 					
+					float overhang_modif = fminf(fmaxf(noise((cx + x * CHUNK_SIZE) * 0.008f, -10.0f, (cz + z * CHUNK_SIZE) * 0.008f)+0.5f,0.0f),1.0f);
 					float lake_modif = (noise((cx + x * CHUNK_SIZE) * 0.02f, 0, (cz + z * CHUNK_SIZE) * 0.02f));
 					if(lake_modif < 0.0f){
-						median_f += 6 * lake_modif;
+						median_f += 10 * lake_modif;
 					}
 					float grass_modif = (noise((cx + x * CHUNK_SIZE) * 0.05f, 0, (cz + z * CHUNK_SIZE) * 0.05f));
 					float ngrass_modif = (noise((cx + x * CHUNK_SIZE) * 0.35f, 0, (cz + z * CHUNK_SIZE) * 0.35f));
@@ -194,6 +196,11 @@ void generate_chunk_data () {
 					uint32_t top_y = 0;
 					
 					for(int cy = CHUNK_SIZE_Y - 1; cy >= 0;--cy){
+						
+						float n_median = median_f;
+						float n_slope = slope_modifier;
+						if(cy > 40.0f && cy < 100.0f && overhang_modif > 0.0f)
+							n_median += fmaxf((-0.0055f * pow((cy - (64+fabs(lake_modif)*16.0f)),2) + 1) * (28.f*overhang_modif), 0.0f);
 						
 						if( cy < SNOW_LEVEL + lake_modif * 16){
 							top_layer_block = btd_map[SGRASS_B].complete_id;
@@ -209,7 +216,7 @@ void generate_chunk_data () {
 							sec_layer_block = btd_map[GRAVEL_B].complete_id; //Gravel
 						}
 						
-						if( block_noise((cx + x * CHUNK_SIZE), (cy), (cz + z * CHUNK_SIZE), slope_modifier, median_f) > 0){
+						if( block_noise((cx + x * CHUNK_SIZE), (cy), (cz + z * CHUNK_SIZE), n_slope, n_median) > 0){
 							if(!under_sky){
 								if(depth_below < 3){
 									p->data->data_unique.block_data[ATBLOCK(cx,cy,cz)] = sec_layer_block;

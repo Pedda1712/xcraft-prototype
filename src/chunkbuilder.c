@@ -14,9 +14,11 @@
 #include <lightcalc.h>
 #include <worldsave.h>
 
-#define Y_AXIS 1
-#define X_AXIS 2
-#define Z_AXIS 3
+enum AXIS_IDENTIFIERS {
+	Y_AXIS=1,
+	X_AXIS,
+	Z_AXIS
+};
 
 #define TEX_SIZE (1.0f/16.0f)
 
@@ -55,44 +57,44 @@ static void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, ui
 		
 		case X_AXIS:{
 			if(mirorred){
-				vertex_coordinates[0] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + BLOCK_SIZE;
-				vertex_coordinates[3] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz;
-				vertex_coordinates[6] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[8] = wz;
-				vertex_coordinates[9] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[11] = wz + BLOCK_SIZE;
+				vertex_coordinates[0] = wx + 1.0f * mirorred;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + 1.0f;
+				vertex_coordinates[3] = wx + 1.0f * mirorred;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz;
+				vertex_coordinates[6] = wx + 1.0f * mirorred;vertex_coordinates[7] = wy + 1.0f - y_offset * shortened;vertex_coordinates[8] = wz;
+				vertex_coordinates[9] = wx + 1.0f * mirorred;vertex_coordinates[10] = wy + 1.0f - y_offset * shortened;vertex_coordinates[11] = wz + 1.0f;
 			}else{
-				vertex_coordinates[0] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz;
-				vertex_coordinates[3] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + BLOCK_SIZE;
-				vertex_coordinates[6] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[8] = wz + BLOCK_SIZE;
-				vertex_coordinates[9] = wx + BLOCK_SIZE * mirorred;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[11] = wz;
+				vertex_coordinates[0] = wx + 1.0f * mirorred;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz;
+				vertex_coordinates[3] = wx + 1.0f * mirorred;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + 1.0f;
+				vertex_coordinates[6] = wx + 1.0f * mirorred;vertex_coordinates[7] = wy + 1.0f - y_offset * shortened;vertex_coordinates[8] = wz + 1.0f;
+				vertex_coordinates[9] = wx + 1.0f * mirorred;vertex_coordinates[10] = wy + 1.0f - y_offset * shortened;vertex_coordinates[11] = wz;
 			}
 		break;}
 		
 		case Y_AXIS:{
 
 			if(mirorred){
-				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[2] = wz + BLOCK_SIZE;
-				vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[5] = wz + BLOCK_SIZE;
-				vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[8] = wz;
-				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[11] = wz;
+				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + 1.0f * mirorred - y_offset * mirorred * shortened;vertex_coordinates[2] = wz + 1.0f;
+				vertex_coordinates[3] = wx + 1.0f;vertex_coordinates[4] = wy + 1.0f * mirorred - y_offset * mirorred * shortened;vertex_coordinates[5] = wz + 1.0f;
+				vertex_coordinates[6] = wx + 1.0f;vertex_coordinates[7] = wy + 1.0f * mirorred - y_offset * mirorred * shortened;vertex_coordinates[8] = wz;
+				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + 1.0f * mirorred - y_offset * mirorred * shortened;vertex_coordinates[11] = wz;
 			}else{
-				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[2] = wz;
-				vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[5] = wz;
-				vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[8] = wz + BLOCK_SIZE;
-				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE * mirorred - y_offset * mirorred * shortened;vertex_coordinates[11] = wz + BLOCK_SIZE;
+				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + 1.0f * mirorred - y_offset * mirorred * shortened;vertex_coordinates[2] = wz;
+				vertex_coordinates[3] = wx + 1.0f;vertex_coordinates[4] = wy + 1.0f * mirorred - y_offset * mirorred * shortened;vertex_coordinates[5] = wz;
+				vertex_coordinates[6] = wx + 1.0f;vertex_coordinates[7] = wy + 1.0f * mirorred - y_offset * mirorred * shortened;vertex_coordinates[8] = wz + 1.0f;
+				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + 1.0f * mirorred - y_offset * mirorred * shortened;vertex_coordinates[11] = wz + 1.0f;
 			}
 		break;}
 		
 		default:{ // Z_AXIS
 			if(mirorred){
-				vertex_coordinates[0] = wx + BLOCK_SIZE;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + BLOCK_SIZE * !mirorred;
-				vertex_coordinates[3] = wx             ;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + BLOCK_SIZE * !mirorred;
-				vertex_coordinates[6] = wx             ;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[8] = wz + BLOCK_SIZE * !mirorred;
-				vertex_coordinates[9] = wx + BLOCK_SIZE;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[11] = wz + BLOCK_SIZE * !mirorred;
+				vertex_coordinates[0] = wx + 1.0f;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + 1.0f * !mirorred;
+				vertex_coordinates[3] = wx             ;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + 1.0f * !mirorred;
+				vertex_coordinates[6] = wx             ;vertex_coordinates[7] = wy + 1.0f - y_offset * shortened;vertex_coordinates[8] = wz + 1.0f * !mirorred;
+				vertex_coordinates[9] = wx + 1.0f;vertex_coordinates[10] = wy + 1.0f - y_offset * shortened;vertex_coordinates[11] = wz + 1.0f * !mirorred;
 			}else{
-				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + BLOCK_SIZE * !mirorred;
-				vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + BLOCK_SIZE * !mirorred;
-				vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[8] = wz + BLOCK_SIZE * !mirorred;
-				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * shortened;vertex_coordinates[11] = wz + BLOCK_SIZE * !mirorred;
+				vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy             ;vertex_coordinates[2] = wz + 1.0f * !mirorred;
+				vertex_coordinates[3] = wx + 1.0f;vertex_coordinates[4] = wy             ;vertex_coordinates[5] = wz + 1.0f * !mirorred;
+				vertex_coordinates[6] = wx + 1.0f;vertex_coordinates[7] = wy + 1.0f - y_offset * shortened;vertex_coordinates[8] = wz + 1.0f * !mirorred;
+				vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + 1.0f - y_offset * shortened;vertex_coordinates[11] = wz + 1.0f * !mirorred;
 			}
 		break;}
 		
@@ -144,10 +146,10 @@ static void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float
 	}
 	
 	// Emit Vertices
-	vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + BLOCK_SIZE - y_offset * conds[0];vertex_coordinates[2] = wz + BLOCK_SIZE;
-	vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy + BLOCK_SIZE - y_offset * conds[1];vertex_coordinates[5] = wz + BLOCK_SIZE;
-	vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE - y_offset * conds[2];vertex_coordinates[8] = wz;
-	vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE - y_offset * conds[3];vertex_coordinates[11] = wz;
+	vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy + 1.0f - y_offset * conds[0];vertex_coordinates[2] = wz + 1.0f;
+	vertex_coordinates[3] = wx + 1.0f;vertex_coordinates[4] = wy + 1.0f - y_offset * conds[1];vertex_coordinates[5] = wz + 1.0f;
+	vertex_coordinates[6] = wx + 1.0f;vertex_coordinates[7] = wy + 1.0f - y_offset * conds[2];vertex_coordinates[8] = wz;
+	vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + 1.0f - y_offset * conds[3];vertex_coordinates[11] = wz;
 	
 	// Emit TexCoords
 	struct blocktexdef_t tex = btd_map[block_t];
@@ -338,9 +340,9 @@ static void water_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, s
 				
 				if (emitter_cond){
 					float wx,wy,wz; // The World-Space Position
-					wx = (x + c_x_off * CHUNK_SIZE) * BLOCK_SIZE;
-					wz = (z + c_z_off * CHUNK_SIZE) * BLOCK_SIZE;
-					wy = y * BLOCK_SIZE;
+					wx = (x + c_x_off * CHUNK_SIZE) * 1.0f;
+					wz = (z + c_z_off * CHUNK_SIZE) * 1.0f;
+					wy = y * 1.0f;
 					
 					bool shortened_block = is_shortened (x, y, z); // Determine if the top side of the block is shifted down
 					
@@ -433,9 +435,9 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 				
 				if (emitter_cond){
 					float wx,wy,wz; // The World-Space Position
-					wx = (x + c_x_off * CHUNK_SIZE) * BLOCK_SIZE;
-					wz = (z + c_z_off * CHUNK_SIZE) * BLOCK_SIZE;
-					wy = y * BLOCK_SIZE;
+					wx = (x + c_x_off * CHUNK_SIZE) * 1.0f;
+					wz = (z + c_z_off * CHUNK_SIZE) * 1.0f;
+					wy = y * 1.0f;
 					
 					bool shortened_block = false; // Determine if the top side of the block is shifted down
 					
@@ -516,14 +518,14 @@ static void emit_x (struct sync_chunk_t* in, float wx, float wy, float wz, uint8
 	float tex_coordinates[16];
 	
 	vertex_coordinates[0] = wx             ;vertex_coordinates[1] = wy              ;vertex_coordinates[2] = wz;
-	vertex_coordinates[3] = wx + BLOCK_SIZE;vertex_coordinates[4] = wy              ;vertex_coordinates[5] = wz + BLOCK_SIZE;
-	vertex_coordinates[6] = wx + BLOCK_SIZE;vertex_coordinates[7] = wy + BLOCK_SIZE;vertex_coordinates[8] = wz + BLOCK_SIZE;
-	vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + BLOCK_SIZE ;vertex_coordinates[11] = wz;
+	vertex_coordinates[3] = wx + 1.0f;vertex_coordinates[4] = wy              ;vertex_coordinates[5] = wz + 1.0f;
+	vertex_coordinates[6] = wx + 1.0f;vertex_coordinates[7] = wy + 1.0f;vertex_coordinates[8] = wz + 1.0f;
+	vertex_coordinates[9] = wx             ;vertex_coordinates[10] = wy + 1.0f ;vertex_coordinates[11] = wz;
 	
-	vertex_coordinates[12] = wx             ;vertex_coordinates[13] = wy             ;vertex_coordinates[14] = wz + BLOCK_SIZE;
-	vertex_coordinates[15] = wx + BLOCK_SIZE;vertex_coordinates[16] = wy             ;vertex_coordinates[17] = wz;
-	vertex_coordinates[18] = wx + BLOCK_SIZE;vertex_coordinates[19] = wy + BLOCK_SIZE;vertex_coordinates[20] = wz;
-	vertex_coordinates[21] = wx             ;vertex_coordinates[22] = wy + BLOCK_SIZE;vertex_coordinates[23] = wz + BLOCK_SIZE;
+	vertex_coordinates[12] = wx             ;vertex_coordinates[13] = wy             ;vertex_coordinates[14] = wz + 1.0f;
+	vertex_coordinates[15] = wx + 1.0f;vertex_coordinates[16] = wy             ;vertex_coordinates[17] = wz;
+	vertex_coordinates[18] = wx + 1.0f;vertex_coordinates[19] = wy + 1.0f;vertex_coordinates[20] = wz;
+	vertex_coordinates[21] = wx             ;vertex_coordinates[22] = wy + 1.0f;vertex_coordinates[23] = wz + 1.0f;
 	
 	struct blocktexdef_t tex = btd_map[block_t];
 	uint8_t tex_index   = tex.index[0];
@@ -561,9 +563,9 @@ static void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, s
 			for(int z = 0; z < CHUNK_SIZE;++z){
 				
 				float wx,wy,wz; // The World-Space Position
-				wx = (x + c_x_off * CHUNK_SIZE) * BLOCK_SIZE;
-				wz = (z + c_z_off * CHUNK_SIZE) * BLOCK_SIZE;
-				wy = y * BLOCK_SIZE;
+				wx = (x + c_x_off * CHUNK_SIZE) * 1.0f;
+				wz = (z + c_z_off * CHUNK_SIZE) * 1.0f;
+				wy = y * 1.0f;
 				
 				uint16_t block_t = data->block_data[ATBLOCK(x,y,z)]; // The Block Type at the current position
 				if(IS_X(block_t)){

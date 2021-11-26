@@ -148,8 +148,8 @@ void block_ray_actor (bool (*action_func)(int, int, int, int, int, float, float,
 		float c_x_off = (float)chunk_x - 0.5f;
 		float c_z_off = (float)chunk_z - 0.5f;
 		
-		int ccx = (int)((float)isx/BLOCK_SIZE - c_x_off * CHUNK_SIZE)%CHUNK_SIZE; // world space coordinate to chunk space coordinate
-		int ccz = (int)((float)isz/BLOCK_SIZE - c_z_off * CHUNK_SIZE)%CHUNK_SIZE;
+		int ccx = (int)((float)isx - c_x_off * CHUNK_SIZE)%CHUNK_SIZE; // world space coordinate to chunk space coordinate
+		int ccz = (int)((float)isz - c_z_off * CHUNK_SIZE)%CHUNK_SIZE;
 		
 		if(isx < 0 && ccx == 0) chunk_x++; // negative integer rounding ... -.-
 		if(isz < 0 && ccz == 0) chunk_z++;

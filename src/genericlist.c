@@ -29,6 +29,23 @@ void GLL_add (struct GLL* gll, void* _new){
 	gll->size++;
 }
 
+void GLL_push(struct GLL* gll, void* _new){
+	struct GLL_element* new = malloc (sizeof (struct GLL_element));
+	new->data = _new;
+	new->next = gll->first;
+	gll->first = new;
+}
+
+void* GLL_pop (struct GLL* gll){
+	
+	void* data_ptr = gll->first->data;
+	struct GLL_element* new_first = gll->first->next;
+	free(gll->first);
+	gll->first = new_first;
+	return data_ptr;
+	
+}
+
 void GLL_rem (struct GLL* gll, void* _rem) {
 
 	if(gll->first != NULL){
