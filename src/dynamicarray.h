@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define DFA_INITSIZE 50
-#define DFA_GROWTHRATE 2
+#define DFA_GROWTHRATE 1.25f
 
 struct DFA {
 	uint32_t size;

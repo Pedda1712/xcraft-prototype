@@ -255,9 +255,10 @@ void generate_chunk_data () {
 						}
 					}
 					
-					float structure1_modif = (noise((cx + x * CHUNK_SIZE) * 0.9f, 0, (cz + z * CHUNK_SIZE) * 0.9f));
+					float forest_modif = (noise((cx + x * CHUNK_SIZE) * 0.01f, 64, (cz + z * CHUNK_SIZE) * 0.01f));
+					float structure1_modif = (noise((cx + x * CHUNK_SIZE) * 1.61f, 0, (cz + z * CHUNK_SIZE) * 1.61f));
 					
-					if(structure1_modif > 0.50f && top_y > WATER_LEVEL && top_y < 64){
+					if(forest_modif > 0.0f && structure1_modif > 0.45f && top_y > WATER_LEVEL && top_y < 64){
 						struct structure_t* new = malloc(sizeof(struct structure_t));
 						struct ipos3 p = {cx + (x - .5f) * CHUNK_SIZE, top_y, cz + (z - .5f) * CHUNK_SIZE};
 						new->base = p;

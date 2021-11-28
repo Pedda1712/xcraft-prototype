@@ -40,11 +40,11 @@ pthread_cond_t chunk_builder_lock;
 
 bool is_running;
 
-static void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel){
+static void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, uint8_t axis, bool mirorred, uint8_t block_t, uint8_t offset, bool shortened, uint8_t lightlevel, uint16_t surrounding [3] [3] [3]){
 
 	float lightmul = (Y_AXIS == axis) ? ( mirorred ? 1.0f : 0.45f) : 0.8f; // Light Level depending on block side
 	lightmul *= (Z_AXIS == axis) ? 0.7f : 1.0f;
-	lightmul *= ((float)lightlevel / (float)MAX_LIGHT);
+	float llevel = lightmul * ((float)lightlevel / (float)MAX_LIGHT);
 	
 	float y_offset = 0.0f;
 	if(offset >= 2)
@@ -52,6 +52,7 @@ static void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, ui
 
 	float vertex_coordinates [12];
 	float tex_coordinates [8];
+	float light_buffer [4] = {llevel,llevel,llevel,llevel};
 	
 	switch(axis){ // Emit the Vertex Positions
 		
@@ -109,13 +110,107 @@ static void emit_face (struct sync_chunk_t* in, float wx, float wy, float wz, ui
 	tex_coordinates[4] = TEX_SIZE * tex_index_x;tex_coordinates[5] = TEX_SIZE * tex_index_y;
 	tex_coordinates[6] = TEX_SIZE * (tex_index_x+1);tex_coordinates[7] = TEX_SIZE * tex_index_y;
 	
+	if(SMOOTH_LIGHTING_ENABLED){
+		switch(axis){
+			case X_AXIS:{
+				if(mirorred){
+					light_buffer[0] = 0.0f + lightlevel;
+					light_buffer[0] += surrounding[2][0][1];light_buffer[0] += surrounding[2][0][2];light_buffer[0] += surrounding[2][1][2];
+					
+					light_buffer[1] = 0.0f + lightlevel;
+					light_buffer[1] += surrounding[2][0][1];light_buffer[1] += surrounding[2][0][0];light_buffer[1] += surrounding[2][1][0];
+					
+					light_buffer[2] = 0.0f + lightlevel;
+					light_buffer[2] += surrounding[2][1][0];light_buffer[2] += surrounding[2][2][0];light_buffer[2] += surrounding[2][2][1];
+					
+					light_buffer[3] = 0.0f + lightlevel;
+					light_buffer[3] += surrounding[2][1][2];light_buffer[3] += surrounding[2][2][2];light_buffer[3] += surrounding[2][2][1];
+				}else{
+					light_buffer[1] = 0.0f + lightlevel;
+					light_buffer[1] += surrounding[0][0][1];light_buffer[1] += surrounding[0][0][2];light_buffer[1] += surrounding[0][1][2];
+					
+					light_buffer[0] = 0.0f + lightlevel;
+					light_buffer[0] += surrounding[0][0][1];light_buffer[0] += surrounding[0][0][0];light_buffer[0] += surrounding[0][1][0];
+					
+					light_buffer[3] = 0.0f + lightlevel;
+					light_buffer[3] += surrounding[0][1][0];light_buffer[3] += surrounding[0][2][0];light_buffer[3] += surrounding[0][2][1];
+					
+					light_buffer[2] = 0.0f + lightlevel;
+					light_buffer[2] += surrounding[0][1][2];light_buffer[2] += surrounding[0][2][2];light_buffer[2] += surrounding[0][2][1];
+				}
+				
+				break;
+			}
+			case Y_AXIS:{
+				
+				if(mirorred){
+					light_buffer[0] = 0.0f + lightlevel;
+					light_buffer[0] += surrounding[0][2][2];light_buffer[0] += surrounding[1][2][2];light_buffer[0] += surrounding[0][2][1];
+					
+					light_buffer[1] = 0.0f + lightlevel;
+					light_buffer[1] += surrounding[2][2][2];light_buffer[1] += surrounding[2][2][1];light_buffer[1] += surrounding[1][2][2];
+					
+					light_buffer[2] = 0.0f + lightlevel;
+					light_buffer[2] += surrounding[2][2][1];light_buffer[2] += surrounding[1][2][0];light_buffer[2] += surrounding[2][2][0];
+					
+					light_buffer[3] = 0.0f + lightlevel;
+					light_buffer[3] += surrounding[0][2][1];light_buffer[3] += surrounding[0][2][0];light_buffer[3] += surrounding[1][2][0];
+				}else{
+					light_buffer[3] = 0.0f + lightlevel;
+					light_buffer[3] += surrounding[0][0][2];light_buffer[3] += surrounding[1][0][2];light_buffer[3] += surrounding[0][0][1];
+					
+					light_buffer[2] = 0.0f + lightlevel;
+					light_buffer[2] += surrounding[2][0][2];light_buffer[2] += surrounding[2][0][1];light_buffer[2] += surrounding[1][0][2];
+					
+					light_buffer[1] = 0.0f + lightlevel;
+					light_buffer[1] += surrounding[2][0][1];light_buffer[1] += surrounding[1][0][0];light_buffer[1] += surrounding[2][0][0];
+					
+					light_buffer[0] = 0.0f + lightlevel;
+					light_buffer[0] += surrounding[0][0][1];light_buffer[0] += surrounding[0][0][0];light_buffer[0] += surrounding[1][0][0];
+				}
+				
+				break;
+			}
+			default :{
+				if(mirorred){
+					light_buffer[0] = 0.0f + lightlevel;
+					light_buffer[0] += surrounding[1][0][0];light_buffer[0] += surrounding[2][0][0];light_buffer[0] += surrounding[2][1][0];
+					
+					light_buffer[1] = 0.0f + lightlevel;
+					light_buffer[1] += surrounding[1][0][0];light_buffer[1] += surrounding[0][0][0];light_buffer[1] += surrounding[0][1][0];
+					
+					light_buffer[2] = 0.0f + lightlevel;
+					light_buffer[2] += surrounding[1][2][0];light_buffer[2] += surrounding[0][2][0];light_buffer[2] += surrounding[0][1][0];
+					
+					light_buffer[3] = 0.0f + lightlevel;
+					light_buffer[3] += surrounding[1][2][0];light_buffer[3] += surrounding[2][2][0];light_buffer[3] += surrounding[2][1][0];
+				}else{
+					light_buffer[1] = 0.0f + lightlevel;
+					light_buffer[1] += surrounding[1][0][2];light_buffer[1] += surrounding[2][0][2];light_buffer[1] += surrounding[2][1][2];
+					
+					light_buffer[0] = 0.0f + lightlevel;
+					light_buffer[0] += surrounding[1][0][2];light_buffer[0] += surrounding[0][0][2];light_buffer[0] += surrounding[0][1][2];
+					
+					light_buffer[3] = 0.0f + lightlevel;
+					light_buffer[3] += surrounding[1][2][2];light_buffer[3] += surrounding[0][2][2];light_buffer[3] += surrounding[0][1][2];
+					
+					light_buffer[2] = 0.0f + lightlevel;
+					light_buffer[2] += surrounding[1][2][2];light_buffer[2] += surrounding[2][2][2];light_buffer[2] += surrounding[2][1][2];
+				}
+				
+				break;
+			}
+		}
+		for(int i = 0; i < 4; i++){light_buffer[i] = ((light_buffer[i] / 4.0f) / (float)MAX_LIGHT) *lightmul;}
+	}
+	
 	for(int i = 0; i < 4; i++){
 		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[0 + i * 3]);
 		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[1 + i * 3]);
 		DFA_add(&in[0].mesh_buffer[offset], vertex_coordinates[2 + i * 3]);
 		DFA_add(&in[0].mesh_buffer[offset], tex_coordinates[0 + i * 2]);
 		DFA_add(&in[0].mesh_buffer[offset], tex_coordinates[1 + i * 2]);
-		DFA_add(&in[0].mesh_buffer[offset], lightmul);
+		DFA_add(&in[0].mesh_buffer[offset], light_buffer[i]);
 	}
 }
 
@@ -171,147 +266,219 @@ static void emit_fluid_curved_top_face (struct sync_chunk_t* in, float wx, float
 	}
 }
 
+void load_borders (int x, int y, int z, uint16_t* border_block_type, struct chunk_t* data, struct chunk_t** neighbour_data ){ // This method gets the bordering blocks of the block at x,y,z (including corner pieces) 
+	bool xc_p, xc_m, zc_p, zc_m;
+	xc_p = (x+1 >= CHUNK_SIZE);
+	xc_m = (x-1 < 0);
+	zc_p = (z+1 >= CHUNK_SIZE);
+	zc_m = (z-1 < 0);
+	
+	uint16_t block_type = 0;
+	if(xc_p){
+		if(neighbour_data[0] != NULL)
+			block_type = neighbour_data[0]->block_data[ATBLOCK(0, y, z)];
+	}else{
+		block_type = data->block_data[ATBLOCK(x+1, y, z)];
+	}
+	border_block_type [0] = block_type;
+	if(xc_m){
+		if(neighbour_data[1] != NULL)
+			block_type = neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1, y, z)];
+	}else{
+		block_type = data->block_data[ATBLOCK(x-1, y, z)];
+	}
+	border_block_type [1] = block_type;
+	if(zc_p){
+		if(neighbour_data[2] != NULL)
+			block_type = neighbour_data[2]->block_data[ATBLOCK(x, y, 0)];
+	}else{
+		block_type = data->block_data[ATBLOCK(x, y, z+1)];
+	}
+	border_block_type [2] = block_type;
+	if(zc_m){
+		if(neighbour_data[3] != NULL)
+			block_type = neighbour_data[3]->block_data[ATBLOCK(x, y, CHUNK_SIZE-1)];
+	}else{
+		block_type = data->block_data[ATBLOCK(x, y, z-1)];
+	}
+	border_block_type [3] = block_type;
+	
+	/* Corner Blocks (Chunk Borders are the worst thing EVVEEEEER)*/
+	
+	//X+Z+
+	int _x = x + 1;
+	int _z = z + 1;
+	struct chunk_t* from_chunk;
+	
+	if(xc_p){
+		_x = 0;
+		from_chunk = neighbour_data[0];
+		
+		if(zc_p){
+			_z = 0;
+			from_chunk = neighbour_data[4];
+		}
+		
+	}else{
+		from_chunk = data;
+		if(zc_p){
+			_z = 0;
+			from_chunk = neighbour_data[2];
+		}
+	}
+	if(from_chunk != NULL)
+		border_block_type[4] = from_chunk->block_data[ATBLOCK(_x, y, _z)];
+	
+	//X+Z-
+	_x = x + 1;
+	_z = z - 1;
+	if(xc_p){
+		_x = 0;
+		from_chunk = neighbour_data[0];
+		
+		if(zc_m){
+			_z = CHUNK_SIZE - 1;
+			from_chunk = neighbour_data[5];
+		}
+		
+	}else{
+		from_chunk = data;
+		if(zc_m){
+			_z = CHUNK_SIZE - 1;
+			from_chunk = neighbour_data[3];
+		}
+	}
+	if(from_chunk != NULL)
+		border_block_type[5] = from_chunk->block_data[ATBLOCK(_x, y, _z)];
+	
+	//X-Z+
+	_x = x - 1;
+	_z = z + 1;
+	if(xc_m){
+		_x = CHUNK_SIZE - 1;
+		from_chunk = neighbour_data[1];
+		
+		if(zc_p){
+			_z = 0;
+			from_chunk = neighbour_data[6];
+		}
+		
+	}else{
+		from_chunk = data;
+		if(zc_p){
+			_z = 0;
+			from_chunk = neighbour_data[2];
+		}
+	}
+	if(from_chunk != NULL)
+		border_block_type[6] = from_chunk->block_data[ATBLOCK(_x, y, _z)];
+	
+	//X-Z-
+	_x = x - 1;
+	_z = z - 1;
+	if(xc_m){
+		_x = CHUNK_SIZE - 1;
+		from_chunk = neighbour_data[1];
+		
+		if(zc_m){
+			_z = CHUNK_SIZE - 1;
+			from_chunk = neighbour_data[7];
+		}
+		
+	}else{
+		from_chunk = data;
+		if(zc_m){
+			_z = CHUNK_SIZE - 1;
+			from_chunk = neighbour_data[3];
+		}
+	}
+	if(from_chunk != NULL)
+		border_block_type[7] = from_chunk->block_data[ATBLOCK(_x, y, _z)];
+	
+}
+
+void load_surrounding_data (int x, int y, int z, struct sync_chunk_t* in, uint16_t surrounding_light_data [3][3][3], struct sync_chunk_t** neighbours){
+
+	if(SMOOTH_LIGHTING_ENABLED){
+		int32_t base_chunk_x = in->_x;
+		int32_t base_chunk_z = in->_z;
+		int32_t current_chunk_x = base_chunk_x;
+		int32_t current_chunk_z = base_chunk_z;
+		struct sync_chunk_t* patient = in;
+		for(int cx = x-1; cx <= x+1; cx++){
+			for(int cy = y-1; cy <= y+1; cy++){
+				for(int cz = z-1; cz <= z+1; cz++){
+					int cs_x = cx % CHUNK_SIZE; cs_x = (cs_x >= 0) ? cs_x : (CHUNK_SIZE + cs_x);
+					int cs_y = cy;
+					int cs_z = cz % CHUNK_SIZE; cs_z = (cs_z >= 0) ? cs_z : (CHUNK_SIZE + cs_z);
+					int new_chunk_x = (cx / 16) + base_chunk_x + ((cx >= 0) ? 0 : -1);
+					int new_chunk_z = (cz / 16) + base_chunk_z + ((cz >= 0) ? 0 : -1);
+					
+					if(new_chunk_x != current_chunk_x || new_chunk_z != current_chunk_z){ // if we are in a different chunk now
+						current_chunk_x = new_chunk_x;
+						current_chunk_z = new_chunk_z;
+						
+						/*
+							NOTE: This Abomination of an If-Statement is substantially faster that doing CLL_getDataAt ... 
+						 */
+						
+						if(current_chunk_x > base_chunk_x && current_chunk_z > base_chunk_z)
+							patient = neighbours[4];
+						else if(current_chunk_x > base_chunk_x && current_chunk_z < base_chunk_z)
+							patient = neighbours[5];
+						else if(current_chunk_x < base_chunk_x && current_chunk_z > base_chunk_z)
+							patient = neighbours[6];
+						else if(current_chunk_x < base_chunk_x && current_chunk_z < base_chunk_z)
+							patient = neighbours[7];
+						else if(current_chunk_x > base_chunk_x && current_chunk_z == base_chunk_z)
+							patient = neighbours[0];
+						else if(current_chunk_x < base_chunk_x && current_chunk_z == base_chunk_z)
+							patient = neighbours[1];
+						else if(current_chunk_z > base_chunk_z && current_chunk_x == base_chunk_x)
+							patient = neighbours[2];
+						else if(current_chunk_z < base_chunk_z && current_chunk_x == base_chunk_x)
+							patient = neighbours[3];
+						else
+							patient = in;
+					}
+					
+					if(patient != NULL){
+						if(cs_y < CHUNK_SIZE_Y){
+							if(!IS_P(patient->data_unique.block_data[ATBLOCK(cs_x, cs_y, cs_z)])){
+								surrounding_light_data[(cx -x)+1][(cy - y)+1][(cz- z)+1] = patient->light.block_data[ATBLOCK(cs_x, cs_y, cs_z)];
+							}
+							else{
+								surrounding_light_data[(cx -x)+1][(cy - y)+1][(cz- z)+1] = MIN_LIGHT;
+							}
+							
+						}
+						else{
+							surrounding_light_data[(cx -x)+1][(cy - y)+1][(cz- z)+1] = MAX_LIGHT;
+						}
+					}else{
+						surrounding_light_data[(cx -x)+1][(cy - y)+1][(cz- z)+1] = MAX_LIGHT;
+					}
+					
+				}
+			}
+		}
+	}else{
+		uint16_t llevel = in->light.block_data[ATBLOCK(x, y, z)];
+		for(int j = 0; j < 3; j++)
+			for(int i = 0; i < 3;i++)
+				for(int h = 0; h < 3; h++)
+					surrounding_light_data[j][i][h] = llevel;
+	}
+}
+
 static void water_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, struct sync_chunk_t** neighbours,struct chunk_t** neighbour_data ,uint32_t emit_offset, uint32_t m_level){
 	
 	int chunk_x = in->_x;
 	int chunk_z = in->_z;
 	
 	uint16_t border_block_type [8];
-	void load_borders (int x, int y, int z){ // This method gets the bordering blocks of the block at x,y,z (including corner pieces) 
-				
-		bool xc_p, xc_m, zc_p, zc_m;
-		xc_p = (x+1 >= CHUNK_SIZE);
-		xc_m = (x-1 < 0);
-		zc_p = (z+1 >= CHUNK_SIZE);
-		zc_m = (z-1 < 0);
-		
-		uint16_t block_type = 0;
-
-		if(xc_p){
-			if(neighbour_data[0] != NULL)
-				block_type = neighbour_data[0]->block_data[ATBLOCK(0, y, z)];
-		}else{
-			block_type = data->block_data[ATBLOCK(x+1, y, z)];
-		}
-		border_block_type [0] = block_type;
-
-		if(xc_m){
-			if(neighbour_data[1] != NULL)
-				block_type = neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1, y, z)];
-		}else{
-			block_type = data->block_data[ATBLOCK(x-1, y, z)];
-		}
-		border_block_type [1] = block_type;
-
-		if(zc_p){
-			if(neighbour_data[2] != NULL)
-				block_type = neighbour_data[2]->block_data[ATBLOCK(x, y, 0)];
-		}else{
-			block_type = data->block_data[ATBLOCK(x, y, z+1)];
-		}
-		border_block_type [2] = block_type;
-
-		if(zc_m){
-			if(neighbour_data[3] != NULL)
-				block_type = neighbour_data[3]->block_data[ATBLOCK(x, y, CHUNK_SIZE-1)];
-		}else{
-			block_type = data->block_data[ATBLOCK(x, y, z-1)];
-		}
-		border_block_type [3] = block_type;
-		
-		/* Corner Blocks (Chunk Borders are the worst thing EVVEEEEER)*/
-		
-		//X+Z+
-		int _x = x + 1;
-		int _z = z + 1;
-		struct chunk_t* from_chunk;
-		
-		if(xc_p){
-			_x = 0;
-			from_chunk = neighbour_data[0];
-			
-			if(zc_p){
-				_z = 0;
-				from_chunk = neighbour_data[4];
-			}
-			
-		}else{
-			from_chunk = data;
-			if(zc_p){
-				_z = 0;
-				from_chunk = neighbour_data[2];
-			}
-		}
-		if(from_chunk != NULL)
-			border_block_type[4] = from_chunk->block_data[ATBLOCK(_x, y, _z)];
-		
-		//X+Z-
-		_x = x + 1;
-		_z = z - 1;
-		if(xc_p){
-			_x = 0;
-			from_chunk = neighbour_data[0];
-			
-			if(zc_m){
-				_z = CHUNK_SIZE - 1;
-				from_chunk = neighbour_data[5];
-			}
-			
-		}else{
-			from_chunk = data;
-			if(zc_m){
-				_z = CHUNK_SIZE - 1;
-				from_chunk = neighbour_data[3];
-			}
-		}
-		if(from_chunk != NULL)
-			border_block_type[5] = from_chunk->block_data[ATBLOCK(_x, y, _z)];
-		
-		//X-Z+
-		_x = x - 1;
-		_z = z + 1;
-		if(xc_m){
-			_x = CHUNK_SIZE - 1;
-			from_chunk = neighbour_data[1];
-			
-			if(zc_p){
-				_z = 0;
-				from_chunk = neighbour_data[6];
-			}
-			
-		}else{
-			from_chunk = data;
-			if(zc_p){
-				_z = 0;
-				from_chunk = neighbour_data[2];
-			}
-		}
-		if(from_chunk != NULL)
-			border_block_type[6] = from_chunk->block_data[ATBLOCK(_x, y, _z)];
-		
-		//X-Z-
-		_x = x - 1;
-		_z = z - 1;
-		if(xc_m){
-			_x = CHUNK_SIZE - 1;
-			from_chunk = neighbour_data[1];
-			
-			if(zc_m){
-				_z = CHUNK_SIZE - 1;
-				from_chunk = neighbour_data[7];
-			}
-			
-		}else{
-			from_chunk = data;
-			if(zc_m){
-				_z = CHUNK_SIZE - 1;
-				from_chunk = neighbour_data[3];
-			}
-		}
-		if(from_chunk != NULL)
-			border_block_type[7] = from_chunk->block_data[ATBLOCK(_x, y, _z)];
-		
-	}
+	
+	uint16_t surrounding_light_data[3][3][3];
 	
 	bool is_shortened (int x, int y, int z){
 		if(y + 1 > CHUNK_SIZE_Y){
@@ -348,16 +515,19 @@ static void water_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, s
 					
 					if(!((y + 1) == CHUNK_SIZE_Y)){
 						if(!IS_TRANS(data->block_data[ATBLOCK(x,y+1,z)])){
-							load_borders (x, y+1, z);
+							load_borders (x, y+1, z, border_block_type, data, neighbour_data);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
 							emit_fluid_curved_top_face (in, wx, wy, wz, block_t, emit_offset, border_block_type, in->light.block_data[ATBLOCK(x,y,z)], true, WATER_B);
 						}
 					}else{
-						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT);
+						load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT, surrounding_light_data);
 					}
 					
 					if(!((y - 1) < 0)){
 						if(!IS_TRANS(data->block_data[ATBLOCK(x,y-1,z)])){
-							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)], surrounding_light_data);
 						}
 					}else{
 						//emit_face(in, wx, wy, wz, Y_AXIS, false, block_t);
@@ -365,47 +535,55 @@ static void water_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, s
 					
 					if(!((x + 1) == CHUNK_SIZE)){
 						if(!IS_TRANS(data->block_data[ATBLOCK(x+1,y,z)])){
-							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[0] != NULL)
 							if(!IS_TRANS(neighbour_data[0]->block_data[ATBLOCK(0,y,z)])){
-								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)], surrounding_light_data);
 							}
 					}
 					
 					if(!((x - 1) < 0)){
 						if(!IS_TRANS(data->block_data[ATBLOCK(x-1,y,z)])){
-							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[1] != NULL){
 							if(!IS_TRANS(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)])){
-								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)], surrounding_light_data);
 							}
 						}
 					}
 					
 					if(!((z + 1) == CHUNK_SIZE)){
 						if(!IS_TRANS(data->block_data[ATBLOCK(x,y,z+1)])){
-							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[2] != NULL){
 							if(!IS_TRANS(neighbour_data[2]->block_data[ATBLOCK(x,y,0)])){
-								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)], surrounding_light_data);
 							}
 						}
 					}
 					
 					if(!((z - 1) < 0)){
 						if(!IS_TRANS(data->block_data[ATBLOCK(x,y,z-1)])){
-							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[3] != NULL){
 							if(!IS_TRANS(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)])){
-								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)] , surrounding_light_data);
 							}
 						}
 					}
@@ -425,6 +603,9 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 	float c_x_off = (float)chunk_x - 0.5f;
 	float c_z_off = (float)chunk_z - 0.5f;
 	
+	uint16_t surrounding_light_data [3][3][3];
+
+	
 	for(int x = 0; x < CHUNK_SIZE;++x){
 		for(int y = 0; y < CHUNK_SIZE_Y;++y){
 			for(int z = 0; z < CHUNK_SIZE;++z){
@@ -443,15 +624,18 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 					
 					if(!((y + 1) == CHUNK_SIZE_Y)){
 						if(!IS_SOLID(data->block_data[ATBLOCK(x,y+1,z)])){
-							emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)], surrounding_light_data);
 						}
 					}else{
-						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT);
+						load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT, surrounding_light_data);
 					}
 					
 					if(!((y - 1) < 0)){
 						if(!IS_SOLID(data->block_data[ATBLOCK(x,y-1,z)])){
-							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)], surrounding_light_data);
 						}
 					}else{
 						//emit_face(in, wx, wy, wz, Y_AXIS, false, block_t);
@@ -459,47 +643,55 @@ static void standard_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data
 					
 					if(!((x + 1) == CHUNK_SIZE)){
 						if(!IS_SOLID(data->block_data[ATBLOCK(x+1,y,z)])){
-							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[0] != NULL)
 							if(!IS_SOLID(neighbour_data[0]->block_data[ATBLOCK(0,y,z)])){
-								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)], surrounding_light_data);
 							}
 					}
 					
 					if(!((x - 1) < 0)){
 						if(!IS_SOLID(data->block_data[ATBLOCK(x-1,y,z)])){
-							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[1] != NULL){
 							if(!IS_SOLID(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)])){
-								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)], surrounding_light_data);
 							}
 						}
 					}
 					
 					if(!((z + 1) == CHUNK_SIZE)){
 						if(!IS_SOLID(data->block_data[ATBLOCK(x,y,z+1)])){
-							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[2] != NULL){
 							if(!IS_SOLID(neighbour_data[2]->block_data[ATBLOCK(x,y,0)])){
-								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)], surrounding_light_data);
 							}
 						}
 					}
 					
 					if(!((z - 1) < 0)){
 						if(!IS_SOLID(data->block_data[ATBLOCK(x,y,z-1)])){
-							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[3] != NULL){
 							if(!IS_SOLID(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)])){
-								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)], surrounding_light_data);
 							}
 						}
 					}
@@ -558,6 +750,8 @@ static void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, s
 	float c_x_off = (float)chunk_x - 0.5f;
 	float c_z_off = (float)chunk_z - 0.5f;
 	
+	uint16_t surrounding_light_data [3][3][3];
+	
 	for(int x = 0; x < CHUNK_SIZE;++x){
 		for(int y = 0; y < CHUNK_SIZE_Y;++y){
 			for(int z = 0; z < CHUNK_SIZE;++z){
@@ -574,57 +768,76 @@ static void plant_mesh_routine (struct sync_chunk_t* in, struct chunk_t* data, s
 					bool shortened_block = false; // Determine if the top side of the block is shifted down
 					
 					if(!((y + 1) == CHUNK_SIZE_Y)){
-						if(!IS_SOLID(data->block_data[ATBLOCK(x,y+1,z)]))
-							emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)]);
+						if(!IS_SOLID(data->block_data[ATBLOCK(x,y+1,z)])){
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y+1,z)], surrounding_light_data);}
 					}else{
-						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT);
+						load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+						emit_face(in, wx, wy, wz, Y_AXIS, true, block_t, emit_offset, shortened_block, MAX_LIGHT, surrounding_light_data);
 					}
 					
 					if(!((y - 1) < 0)){
 						if(!IS_P(data->block_data[ATBLOCK(x,y-1,z)]) && !IS_SOLID(data->block_data[ATBLOCK(x,y-1,z)])){
-							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Y_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y-1,z)], surrounding_light_data);
 						}
 					}
 					
 					if(!((x + 1) == CHUNK_SIZE)){
-						if(!IS_SOLID(data->block_data[ATBLOCK(x+1,y,z)]))
-							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)]);
+						if(!IS_SOLID(data->block_data[ATBLOCK(x+1,y,z)])){
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x+1,y,z)], surrounding_light_data);
+							
+						}
 					}else{
 						if(neighbour_data[0] != NULL)
-							if(!IS_SOLID(neighbour_data[0]->block_data[ATBLOCK(0,y,z)]))
-								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)]);
+							if(!IS_SOLID(neighbour_data[0]->block_data[ATBLOCK(0,y,z)])){
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, X_AXIS, true, block_t, emit_offset, shortened_block, neighbours[0]->light.block_data[ATBLOCK(0,y,z)], surrounding_light_data);
+								
+							}
 					}
 					
 					if(!((x - 1) < 0)){
 						if(!IS_P(data->block_data[ATBLOCK(x-1,y,z)]) && !IS_SOLID(data->block_data[ATBLOCK(x-1,y,z)])){
-							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x-1,y,z)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[1] != NULL){
 							if(!IS_P(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)]) && !IS_SOLID(neighbour_data[1]->block_data[ATBLOCK(CHUNK_SIZE-1,y,z)])){
-								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, X_AXIS, false, block_t, emit_offset, shortened_block, neighbours[1]->light.block_data[ATBLOCK(CHUNK_SIZE-1,y,z)], surrounding_light_data);
 							}
 						}
 					}
 					
 					if(!((z + 1) == CHUNK_SIZE)){
-						if(!IS_SOLID(data->block_data[ATBLOCK(x,y,z+1)]))
-							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)]);
+						if(!IS_SOLID(data->block_data[ATBLOCK(x,y,z+1)])){
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z+1)], surrounding_light_data);
+							
+						}
 					}else{
 						if(neighbour_data[2] != NULL){
-							if(!IS_SOLID(neighbour_data[2]->block_data[ATBLOCK(x,y,0)]))
-								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)]);
+							if(!IS_SOLID(neighbour_data[2]->block_data[ATBLOCK(x,y,0)])){
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, Z_AXIS, false, block_t, emit_offset, shortened_block, neighbours[2]->light.block_data[ATBLOCK(x,y,0)], surrounding_light_data);
+								
+							}
 						}
 					}
 					
 					if(!((z - 1) < 0)){
 						if(!IS_P(data->block_data[ATBLOCK(x,y,z-1)]) && !IS_SOLID(data->block_data[ATBLOCK(x,y,z-1)])){
-							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)]);
+							load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+							emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, in->light.block_data[ATBLOCK(x,y,z-1)], surrounding_light_data);
 						}
 					}else{
 						if(neighbour_data[3] != NULL){
 							if(!IS_P(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)]) && !IS_SOLID(neighbour_data[3]->block_data[ATBLOCK(x,y,CHUNK_SIZE-1)])){
-								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)]);
+								load_surrounding_data(x,y,z, in, surrounding_light_data, neighbours);
+								emit_face(in, wx, wy, wz, Z_AXIS, true, block_t, emit_offset, shortened_block, neighbours[3]->light.block_data[ATBLOCK(x,y,CHUNK_SIZE-1)], surrounding_light_data);
 							}
 						}
 					}

@@ -26,7 +26,7 @@ uint16_t width = 1600;
 uint16_t height = 900;
 
 int main () {
-
+	
 	printf("Initializing X11 Window ... \n");
 	xg_init();
 	xg_window(width, height, "XCraft");
